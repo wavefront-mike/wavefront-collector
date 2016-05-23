@@ -223,15 +223,25 @@ class SystemCheckerCommand(command.Command):
         successful = False
         while attempts < 5 and not utils.CANCEL_WORKERS_EVENT.is_set():
             try:
-                events_api.create_new_event(
-                    name,
-                    s=int(start),
-                    e=int(end),
-                    c=(start == end),
-                    d=description,
-                    h=[self.config.source_name, ],
-                    l=severity,
-                    t=etype)
+                if start == end:
+                    events_api.create_new_event(
+                        name,
+                        s=int(start),
+                        c=True,
+                        d=description,
+                        h=[self.config.source_name, ],
+                        l=severity,
+                        t=etype)
+                else:
+                    events_api.create_new_event(
+                        name,
+                        s=int(start),
+                        e=int(end),
+                        c=False,
+                        d=description,
+                        h=[self.config.source_name, ],
+                        l=severity,
+                        t=etype)
                 successful = True
                 break
 
