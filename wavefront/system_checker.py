@@ -285,7 +285,7 @@ class SystemCheckerCommand(command.Command):
                 continue
 
             if hashval != expected_hashval:
-                modified = os.path.getmtime(path)
+                modified = os.path.getmtime(path) * 1000
                 self.logger.warning('[%s] MD5 mismatch. '
                                     'Expected: %s; Found: %s',
                                     path, expected_hashval, hashval)
