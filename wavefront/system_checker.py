@@ -8,6 +8,7 @@ where you want to check for things like core files, etc
 import ConfigParser
 import fnmatch
 import hashlib
+import httplib
 import logging
 import os
 import os.path
@@ -47,6 +48,8 @@ class SystemCheckerConfiguration(Configuration):
         self.md5_files = self.getlist('md5', 'files', [])
         self.md5_hashes = self.getlist('md5', 'expected_hashes', [])
 
+        self.log_requests = True
+
     def validate(self):
         """
         Validates the configuration values
@@ -83,6 +86,8 @@ class SystemCheckerCommand(command.Command):
 
     def _init_logging(self):
         self.logger = logging.getLogger()
+        if self.config.log_requests:
+            httplib.HTTPConnection.debuglevel = 1
 
     #pylint: disable=no-self-use
     def get_help_text(self):
@@ -264,7 +269,8 @@ class SystemCheckerCommand(command.Command):
                             self.logger.warning('Found core file %s', fullpath)
                             created = os.path.getctime(fullpath)
                             hashval = utils.hashfile(fullpath, hashlib.md5())
-                            self._send_event(hashval, 'Core found',
+                            self._send_event(hashval,
+                                             'Core found',
                                              'Core file found at ' + fullpath,
                                              created, created, 'Warning',
                                              'Core')
@@ -289,9 +295,13 @@ class SystemCheckerCommand(command.Command):
                 self.logger.warning('[%s] MD5 mismatch. '
                                     'Expected: %s; Found: %s',
                                     path, expected_hashval, hashval)
-                self._send_event(None, 'MD5 mismatch (' + path + ')',
+                self._send_event(None,
                                  'MD5 mismatch (' + path + ')',
-                                 modified, modified, 'Warning', 'MD5 mismatch')
+                                 'MD5 mismatch (' + path + ')',
+                                 modified,
+                                 modified,
+                                 'Warning',
+                                 'MD5 mismatch')
 
             index = index + 1
 
