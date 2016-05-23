@@ -225,8 +225,8 @@ class SystemCheckerCommand(command.Command):
             try:
                 events_api.create_new_event(
                     name,
-                    s=start,
-                    e=end,
+                    s=int(start),
+                    e=int(end),
                     c=(start == end),
                     d=description,
                     h=[self.config.source_name, ],
