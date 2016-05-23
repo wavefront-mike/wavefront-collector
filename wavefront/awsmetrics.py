@@ -379,7 +379,8 @@ class AwsMetricsCommand(command.Command):
             tags = {}
             if instance.tags:
                 for tag in instance.tags:
-                    if tag['Key'] in self.config.ec2_tag_keys:
+                    if (self.config.ec2_tag_keys[0] == '*' or
+                            tag['Key'] in self.config.ec2_tag_keys):
                         tags[tag['Key']] = tag['Value']
             self.instance_tags[instance.id] = tags
 

@@ -16,8 +16,8 @@ import sys
 import time
 
 import wavefront_client
-from wavefront.utils import Configuration
 from wavefront_client.rest import ApiException
+from wavefront.utils import Configuration
 from wavefront import command
 from wavefront import utils
 
@@ -230,9 +230,9 @@ class SystemCheckerCommand(command.Command):
                 successful = True
                 break
 
-            except ApiException as e:
-                self.logger.warning('Failed to send event: %s (attempt %d)',
-                                    e.reason, attempts+1)
+            except ApiException as api_ex:
+                self.logger.warning('Failed to send event: %s (attempt %d)\n%s',
+                                    api_ex.reason, attempts+1, api_ex.body)
 
             except:
                 self.logger.warning('Failed to send event: %s (attempt %d)',
@@ -281,6 +281,7 @@ class SystemCheckerCommand(command.Command):
             expected_hashval = self.config.md5_hashes[index]
             if expected_hashval == 'first_run':
                 self.config.set_expected_hash(index, hashval)
+                index = index + 1
                 continue
 
             if hashval != expected_hashval:
