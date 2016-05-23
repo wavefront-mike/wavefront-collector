@@ -373,8 +373,6 @@ class AwsMetricsCommand(command.Command):
             return
 
         self.logger.info('Retrieving instances ...')
-        next_token = ''
-        has_more = True
         for instance in self.aws_ec2_resource.instances.all():
             tags = {}
             if instance.tags:

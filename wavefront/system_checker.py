@@ -229,7 +229,7 @@ class SystemCheckerCommand(command.Command):
                     e=end,
                     c=(start == end),
                     d=description,
-                    h=list(self.config.source_name),
+                    h=[self.config.source_name, ],
                     l=severity,
                     t=etype)
                 successful = True
