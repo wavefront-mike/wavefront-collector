@@ -14,7 +14,7 @@ setuptools.setup(
     license='BSD',
     keywords='wavefront',
     url='https://www.wavefront.com',
-    install_requires=['wavefront_client', 'python-dateutil', 'logging', 'python-daemon'],
+    install_requires=['wavefront_client', 'python-dateutil', 'logging', 'python-daemon', 'boto3'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Topic :: Utilities',

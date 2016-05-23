@@ -17,6 +17,7 @@ import time
 
 import wavefront_client
 from wavefront.utils import Configuration
+from wavefront_client.rest import ApiException
 from wavefront import command
 from wavefront import utils
 
@@ -56,6 +57,19 @@ class SystemCheckerConfiguration(Configuration):
         if len(self.md5_files) != len(self.md5_hashes):
             raise ValueError('md5.files must have the same number of items '
                              'as md5.expected_hashes')
+
+    def set_expected_hash(self, index, hashval):
+        """
+        Sets the expected hash value for the given index
+
+        Arguments:
+        index - the index in the self.md5_hashes array to set (0 based)
+        hashval - the md5 hash value to update to
+        """
+
+        self.md5_hashes[index] = hashval
+        self.config.set('md5', 'expected_hashes', ','.join(self.md5_hashes))
+        self.save()
 
 class SystemCheckerCommand(command.Command):
     """
@@ -216,10 +230,16 @@ class SystemCheckerCommand(command.Command):
                 successful = True
                 break
 
-            except:
-                attempts = attempts + 1
+            except ApiException as e:
                 self.logger.warning('Failed to send event: %s (attempt %d)',
-                                    str(sys.exc_info()), attempts)
+                                    e.reason, attempts+1)
+
+            except:
+                self.logger.warning('Failed to send event: %s (attempt %d)',
+                                    str(sys.exc_info()), attempts+1)
+
+            if not successful:
+                attempts = attempts + 1
                 if not utils.CANCEL_WORKERS_EVENT.is_set():
                     time.sleep(sleep_time)
                     sleep_time = sleep_time * 2
@@ -259,6 +279,10 @@ class SystemCheckerCommand(command.Command):
             self.logger.info('Checking MD5 for %s ...', path)
             hashval = utils.hashfile(path, hashlib.md5())
             expected_hashval = self.config.md5_hashes[index]
+            if expected_hashval == 'first_run':
+                self.config.set_expected_hash(index, hashval)
+                continue
+
             if hashval != expected_hashval:
                 modified = os.path.getmtime(path)
                 self.logger.warning('[%s] MD5 mismatch. '
