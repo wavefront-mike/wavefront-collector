@@ -86,4 +86,4 @@ The source attribute is determined by either the `source_names` field in the met
 ### Start and End Time
 If the script has never been run, the default behavior is to get data from 5 minutes ago.  This can be controlled by the `first_run_start_minutes` configuration option.
 For each subsequent run, the start time is equal to the `last_run_time` and the end time is the current run time.
-After each run, the `last_run_time` is updated
+After each run, the `last_run_time` is updated to the current run's `end time`.

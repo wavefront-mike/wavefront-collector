@@ -61,7 +61,7 @@ DEFAULT_CONFIG_FILE = '/opt/wavefront/etc/aws-metrics.conf'
 # List of potential key names for the source/host value (can be overriden
 # in the above namespace configuration)
 # A numeric value in this means that that index in the Dimensions is chosen
-DEFAULT_SOURCE_NAMES = ['Name', 'Service', 'AvailabilityZone', 0, 'Namespace', '=AWS']
+DEFAULT_SOURCE_NAMES = ['Name', 'InstanceId', 'Service', 'AvailabilityZone', 0, 'Namespace', '=AWS']
 
 # Mapping for statistic name to its "short" name.  The short name is used
 # in the metric name sent to Wavefront
@@ -115,6 +115,10 @@ class AwsMetricsConfiguration(Configuration):
         self.metric_config_path = self.get(
             'options', 'metric_config_path', DEFAULT_METRIC_CONFIG_FILE)
 
+        self.aws_access_key_id = self.get('aws', 'access_key_id', None)
+        self.aws_secret_access_key = self.get('aws', 'secret_access_key', None)
+        self.regions = self.getlist('aws', 'regions', None)
+
         self.role_arn = self.get('assume_role', 'role_arn', None)
         self.role_session_name = self.get(
             'assume_role', 'role_session_name', None)
@@ -145,6 +149,12 @@ class AwsMetricsConfiguration(Configuration):
         Throws:
         ValueError when a configuration item is missing a value
         """
+
+        if (not self.aws_access_key_id or
+                not self.aws_secret_access_key or
+                not self.regions):
+            raise ValueError('AWS access key ID, secret access key, '
+                             'and regions are required')
 
         if not self.metric_config_path:
             raise ValueError('options.metric_config_path is required')
@@ -261,6 +271,13 @@ class AwsMetricsCommand(command.Command):
     def _get_source(config, point_tags, dimensions):
         """
         Determine the source from the point tags.
+        Argument:
+        config - the configuration returned from get_metric_configuration()
+        point_tags - all the point tags for this metric (dictionary)
+        dimensions - the dimensions for this metric (dictionary)
+
+        Returns:
+        Tuple of (source value, key of the source of the source)
         """
 
         if 'source_names' in config:
@@ -271,22 +288,21 @@ class AwsMetricsCommand(command.Command):
         for name in source_names:
             if isinstance(name, numbers.Number):
                 if len(dimensions) < int(name):
-                    return dimensions[name]
+                    return (dimensions[name], name)
                 else:
                     continue
 
             if name[0:1] == '=':
-                return name[1:]
+                return (name[1:], None)
 
             if name in point_tags:
-                return point_tags[name]
+                return (point_tags[name], name)
 
-        return None
-
+        return (None, None)
 
     #pylint: disable=too-many-locals
     #pylint: disable=too-many-branches
-    def _process_metrics(self, metrics, start, end):
+    def _process_metrics(self, metrics, start, end, region):
         """
         Loops over all metrics and call GetMetricStatistics() on each that are
         included by the configuration.
@@ -295,6 +311,7 @@ class AwsMetricsCommand(command.Command):
         metrics - the array of metrics returned from ListMetrics() ('Metrics')
         start - the start time
         end - the end time
+        region - the AWS region
         """
 
         for metric in metrics:
@@ -303,13 +320,15 @@ class AwsMetricsCommand(command.Command):
             metric_name = '{}.{}'.format(
                 metric['Namespace'].lower().replace('/', '.'),
                 metric['MetricName'].lower())
-            point_tags = {'Namespace': metric['Namespace']}
+            point_tags = {'Namespace': metric['Namespace'],
+                          'Region': region}
             for dim in metric['Dimensions']:
                 point_tags[dim['Name']] = dim['Value']
                 if self.instance_tags and dim['Name'] == 'InstanceId':
-                    instanceId = dim['Value']
-                    if instanceId in self.instance_tags:
-                        for key, value in self.instance_tags[instanceId]:
+                    instance_id = dim['Value']
+                    if instance_id in self.instance_tags:
+                        instance_tags = self.instance_tags[instance_id]
+                        for key, value in instance_tags.iteritems():
                             point_tags[key] = value
 
             config = self.get_metric_configuration(metric['Namespace'],
@@ -317,7 +336,8 @@ class AwsMetricsCommand(command.Command):
             if config is None or len(config['stats']) == 0:
                 continue
 
-            source = self._get_source(config, point_tags, metric['Dimensions'])
+            source, source_key = self._get_source(
+                config, point_tags, metric['Dimensions'])
             if not source:
                 self.logger.warning('Source is not found in %s', str(metric))
                 continue
@@ -329,6 +349,8 @@ class AwsMetricsCommand(command.Command):
                 curr_end = end
 
             while (curr_end - curr_start).total_seconds() > 0:
+                if utils.CANCEL_WORKERS_EVENT.is_set():
+                    break
                 stats = self.aws_cloudwatch_client.get_metric_statistics(
                     Namespace=metric['Namespace'],
                     MetricName=metric['MetricName'],
@@ -340,6 +362,8 @@ class AwsMetricsCommand(command.Command):
                 number_of_stats = len(config['stats'])
                 for stat in stats['Datapoints']:
                     for statname in config['stats']:
+                        if utils.CANCEL_WORKERS_EVENT.is_set():
+                            return
                         short_name = STAT_SHORT_NAMES[statname]
                         if (number_of_stats == 1 and
                                 self.config.has_suffix_for_single_stat):
@@ -347,10 +371,16 @@ class AwsMetricsCommand(command.Command):
                         else:
                             full_metric_name = metric_name + '.' + short_name
 
+                        # remove point tags that we don't need for WF
+                        if 'Namespace' in point_tags:
+                            del point_tags['Namespace']
+
+                        # send the metric to the proxy
+                        tstamp = int(utils.unix_time_seconds(stat['Timestamp']))
                         self.proxy.transmit_metric(
                             self.config.metric_name_prefix + full_metric_name,
                             stat[statname],
-                            utils.unix_time_seconds(stat['Timestamp']) * 1000,
+                            tstamp * 1000,
                             source,
                             point_tags)
 
@@ -360,9 +390,11 @@ class AwsMetricsCommand(command.Command):
                 else:
                     curr_end = end
 
-    def _reload_instance_data(self):
+    def _reload_instance_data(self, region):
         """
         Calls EC2.DescribeInstances() and retrieves all instances and their tags
+        Arguments:
+        region - the region name
         Side Effects:
         self.instance_tags updated
         """
@@ -383,32 +415,36 @@ class AwsMetricsCommand(command.Command):
             self.instance_tags[instance.id] = tags
 
         # cache the results
-        path = os.path.join(self.config.cache_dir, 'instance_tag_cache.json')
+        fname = ('instance_tag_cache_%s.json' % (region, ))
+        path = os.path.join(self.config.cache_dir, fname)
         with open(path, 'w') as cachefd:
             json.dump(self.instance_tags, cachefd)
 
-    def _populate_instance_tags(self):
+    def _populate_instance_tags(self, region):
         """
         Gets the instances and their tags.  Caches that data for at most one
         day (configurable?).
+        Arguments:
+        region - the region name
         """
 
         if not self.config.ec2_tag_keys:
             return
 
-        path = os.path.join(self.config.cache_dir, 'instance_tag_cache.json')
+        fname = ('instance_tag_cache_%s.json' % (region, ))
+        path = os.path.join(self.config.cache_dir, fname)
         if os.path.exists(path):
             now = datetime.datetime.utcnow()
             mtime = datetime.datetime.fromtimestamp(os.path.getmtime(path))
             time_to_refresh = mtime + datetime.timedelta(days=1)
             if now < time_to_refresh:
-                self._reload_instance_data()
+                self._reload_instance_data(region)
             else:
                 self.logger.info('Loading instance data from cache ...')
                 with open(path, 'r') as contents:
                     self.instance_tags = json.load(contents)
         else:
-            self._reload_instance_data()
+            self._reload_instance_data(region)
 
     #pylint: disable=no-self-use
     def get_help_text(self):
@@ -417,28 +453,44 @@ class AwsMetricsCommand(command.Command):
         """
         return "Pull metrics from AWS CloudWatch and push them into Wavefront"
 
-    def _initialize_aws_client(self):
+    def _initialize_aws_client(self, region):
         """
         Sets up the AWS clients for EC2 and CloudWatch using the role if
         required.
+        Arguments:
+        region - the region to use when connecting with AWS
         """
+
         if self.config.role_arn is not None:
-            client = boto3.client('sts')
+            client = boto3.client(
+                'sts', region_name=region,
+                aws_access_key_id=self.config.aws_access_key_id,
+                aws_secret_access_key=self.config.aws_secret_access_key)
             role = client.assume_role(
                 RoleArn=self.config.role_arn,
                 ExternalId=self.config.role_external_id,
                 RoleSessionName=self.config.role_session_name)
             session = boto3.Session(role['Credentials']['AccessKeyId'],
                                     role['Credentials']['SecretAccessKey'],
-                                    role['Credentials']['SessionToken'])
+                                    role['Credentials']['SessionToken'],
+                                    region_name=region)
             self.aws_cloudwatch_client = session.client('cloudwatch')
             self.aws_ec2_client = session.client('ec2')
             self.aws_ec2_resource = session.resource('ec2')
 
         else:
-            self.aws_cloudwatch_client = boto3.client('cloudwatch')
-            self.aws_ec2_client = boto3.client('ec2')
-            self.aws_ec2_resource = session.resource('ec2')
+            self.aws_cloudwatch_client = boto3.client(
+                'cloudwatch', region_name=region,
+                aws_access_key_id=self.config.aws_access_key_id,
+                aws_secret_access_key=self.config.aws_secret_access_key)
+            self.aws_ec2_client = boto3.client(
+                'ec2', region_name=region,
+                aws_access_key_id=self.config.aws_access_key_id,
+                aws_secret_access_key=self.config.aws_secret_access_key)
+            self.aws_ec2_resource = session.resource(
+                'ec2', region_name=region,
+                aws_access_key_id=self.config.aws_access_key_id,
+                aws_secret_access_key=self.config.aws_secret_access_key)
 
     def _execute(self):
         """
@@ -446,26 +498,31 @@ class AwsMetricsCommand(command.Command):
         """
 
         self._init_proxy()
-        self._initialize_aws_client()
         self._load_metric_config()
 
-        # DescribeInstances - get tags to add to points
-        self._populate_instance_tags()
+        # ListMetrics() API for each region
+        for region in self.config.regions:
+            if utils.CANCEL_WORKERS_EVENT.is_set():
+                return
 
-        # ListMetrics() API
-        self.logger.info('Loading metrics for %s - %s',
-                         str(self.config.start_time), str(self.config.end_time))
-        response = self.aws_cloudwatch_client.list_metrics()
-        self.logger.debug('Response: %s', str(response))
-        metrics_available = 'Metrics' in response
-        while metrics_available and not utils.CANCEL_WORKERS_EVENT.is_set():
-            self._process_metrics(response['Metrics'],
-                                  self.config.start_time, self.config.end_time)
-            if 'NextToken' in response:
-                response = self.aws_cloudwatch_client.list_metrics(
-                    NextToken=response['NextToken'])
-                metrics_available = 'Metrics' in response
-            else:
-                metrics_available = False
+            self._initialize_aws_client(region)
+            self._populate_instance_tags(region)
+            self.logger.info('Loading metrics for %s - %s (Region: %s)',
+                             str(self.config.start_time),
+                             str(self.config.end_time),
+                             region)
+            response = self.aws_cloudwatch_client.list_metrics()
+            metrics_available = 'Metrics' in response
+            while metrics_available and not utils.CANCEL_WORKERS_EVENT.is_set():
+                self._process_metrics(response['Metrics'],
+                                      self.config.start_time,
+                                      self.config.end_time,
+                                      region)
+                if 'NextToken' in response:
+                    response = self.aws_cloudwatch_client.list_metrics(
+                        NextToken=response['NextToken'])
+                    metrics_available = 'Metrics' in response
+                else:
+                    metrics_available = False
 
         self.config.set_last_run_time(self.config.end_time)

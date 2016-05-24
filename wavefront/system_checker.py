@@ -38,6 +38,10 @@ class SystemCheckerConfiguration(Configuration):
         self.cache_location = self.get('global', 'cache_dir', '/tmp')
         self.source_name = self.get('global', 'source_name',
                                     socket.gethostname())
+        self.log_requests = self.getboolean('global', 'log_requests', False)
+        self.ignore_ssl_cert_errors = self.getboolean(
+            'global', 'ignore_ssl_cert_errors', False)
+
         self.wf_api_key = self.get('wavefront', 'api_key', None)
         self.wf_api_base = self.get('wavefront', 'api_base',
                                     'https://metrics.wavefront.com')
@@ -47,8 +51,6 @@ class SystemCheckerConfiguration(Configuration):
 
         self.md5_files = self.getlist('md5', 'files', [])
         self.md5_hashes = self.getlist('md5', 'expected_hashes', [])
-
-        self.log_requests = False
 
     def validate(self):
         """
@@ -136,6 +138,8 @@ class SystemCheckerCommand(command.Command):
         wavefront_client.configuration.api_key['X-AUTH-TOKEN'] = \
           self.config.wf_api_key
         wavefront_client.configuration.host = self.config.wf_api_base
+        wavefront_client.configuration.verify_ssl = (
+            not self.config.ignore_ssl_cert_errors)
 
     def _get_event_file(self, etype):
         """
