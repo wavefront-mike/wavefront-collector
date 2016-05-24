@@ -479,18 +479,13 @@ class AwsMetricsCommand(command.Command):
             self.aws_ec2_resource = session.resource('ec2')
 
         else:
-            self.aws_cloudwatch_client = boto3.client(
-                'cloudwatch', region_name=region,
+            session = boto3.Session(
+                region_name=region,
                 aws_access_key_id=self.config.aws_access_key_id,
                 aws_secret_access_key=self.config.aws_secret_access_key)
-            self.aws_ec2_client = boto3.client(
-                'ec2', region_name=region,
-                aws_access_key_id=self.config.aws_access_key_id,
-                aws_secret_access_key=self.config.aws_secret_access_key)
-            self.aws_ec2_resource = session.resource(
-                'ec2', region_name=region,
-                aws_access_key_id=self.config.aws_access_key_id,
-                aws_secret_access_key=self.config.aws_secret_access_key)
+            self.aws_cloudwatch_client = session.client('cloudwatch')
+            self.aws_ec2_client = session.client('ec2')
+            self.aws_ec2_resource = session.resource('ec2')
 
     def _execute(self):
         """
