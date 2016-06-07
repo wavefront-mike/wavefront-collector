@@ -359,6 +359,7 @@ class NewRelicMetricRetrieverCommand(NewRelicCommand):
         self.call_paginated_api('/applications.json', query_string,
                                 self._handle_applications_response, args)
 
+    #pylint: disable=too-many-branches
     def _handle_applications_response(self, response, start, end):
         """
         Function that handles each page response that is returned from the

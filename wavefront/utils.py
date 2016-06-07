@@ -23,6 +23,8 @@ def unix_time_seconds(date_in):
     Arguments:
     date_in - the datetime object to convert. This must have a tz = UTC
     """
+    if not date_in.tzinfo or date_in.tzinfo != dateutil.tz.tzutc():
+        date_in = date_in.replace(tzinfo=dateutil.tz.tzutc())
     return (date_in - EPOCH).total_seconds()
 
 def urlencode_utf8(params):
@@ -157,9 +159,10 @@ class Configuration(object):
         with open(self.config_file_path, 'w') as configfile:
             self.config.write(configfile)
 
-def sanitize_name(_name):
+def sanitize_name(_name, replace_map=None):
     """
     Replaces characters that are not supported
+    default list:
     '.'  => _
     '//' => .
     '/'  => .
@@ -173,15 +176,51 @@ def sanitize_name(_name):
     Sanitized name
     """
 
+    if not replace_map:
+        replace_map = {
+            '*': 'all',
+            '.': '_',
+            '//': '.',
+            '/': '.'
+        }
+
     # see http://stackoverflow.com/a/27086669 for details on performance
     # of various methods of doing this
-    name = (_name.lower()
-            .replace('*', 'all')
-            .replace('.', '_')
-            .replace('//', '.')
-            .replace('/', '.'))
+    name = _name.lower()
+    for search, replace in replace_map.iteritems():
+        name = name.replace(search, replace)
     name = re.sub(r'[^a-z\-_0-9\.]', '_', name)
     return name
+
+# Mapping for product names found in the CSV file to the metric prefix name
+PRODUCT_NAME_TO_PREFIX = {
+    'AmazonCloudWatch': 'cloudwatch',
+    'Amazon DynamoDB': 'dynamodb',
+    'Amazon Elastic Compute Cloud': 'ec2',
+    'Amazon Elastic File System': 'efs',
+    'Amazon Route 53': 'route53',
+    'Amazon Simple Email Service': 'ses',
+    'Amazon Simple Notification Service': 'sns',
+    'Amazon Simple Queue Service': 'sqs',
+    'Amazon Simple Storage Service': 's3',
+    'Amazon Virtual Private Cloud': 'vpc',
+    'AWS CloudHSM': 'cloudhsm',
+    'AWS CloudTrail': 'cloudtrail',
+    'AWS Config': 'config',
+    'AWS Direct Connect': 'directconnect',
+    'AWS Key Management Service': 'kms'
+}
+
+def get_aws_product_short_name(product):
+    """
+    Given a product name (e.g., "AWS CloudTrail"), return the metric
+    name prefix for it (e.g., "cloudtrail")
+    """
+
+    if product in PRODUCT_NAME_TO_PREFIX:
+        return PRODUCT_NAME_TO_PREFIX[product]
+    else:
+        return product.replace(' ', '')
 
 #pylint: disable=too-few-public-methods
 class LockedIterator(object):
@@ -220,6 +259,8 @@ def parallel_process_and_wait(iterator, workers, logger=None):
     Will wait for all threads to complete before returning
 
     Arguments:
+    iterator - an iterable list of items to be passed to the worker routine
+               each item should be a tuple of (function, (args))
     workers - number of workers (threads)
     """
     locked_iterator = LockedIterator(iterator)
@@ -276,6 +317,7 @@ def worker(locked_iterator, logger=None):
 
             break
 
+#pylint: disable=unused-argument
 def script_debug(signalnum, frame):
     """
     Dump stack traces
@@ -283,6 +325,7 @@ def script_debug(signalnum, frame):
 
     dump_stack_traces(None)
 
+#pylint: disable=unused-argument
 def interrupt_signal_handler(signalnum, frame):
     """
     Function that gets called when SIGINT signal is sent
@@ -292,7 +335,7 @@ def interrupt_signal_handler(signalnum, frame):
     # set the event so all worker threads will know to stop
     CANCEL_WORKERS_EVENT.set()
 
-def setup_signal_handlers():
+def setup_signal_handlers(logger):
     """
     Registers handlers for SIGINT
     """
@@ -300,6 +343,8 @@ def setup_signal_handlers():
     signal.signal(signal.SIGINT, interrupt_signal_handler)
     signal.signal(signal.SIGTERM, interrupt_signal_handler)
     signal.signal(signal.SIGUSR1, script_debug)
+    if logger:
+        logger.info('Signal handlers attached')
 
 #pylint: disable=protected-access
 def dump_stack_traces(logger=None):
@@ -332,4 +377,3 @@ def hashfile(file_path, hasher, blocksize=65536):
             hasher.update(buf)
             buf = afile.read(blocksize)
         return hasher.hexdigest()
-

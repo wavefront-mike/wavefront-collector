@@ -52,6 +52,10 @@ class SystemCheckerConfiguration(Configuration):
         self.md5_files = self.getlist('md5', 'files', [])
         self.md5_hashes = self.getlist('md5', 'expected_hashes', [])
 
+        if len(self.md5_files) > len(self.md5_hashes):
+            for i in range(len(self.md5_hashes), len(self.md5_files)):
+                self.md5_hashes[i] = ''
+
     def validate(self):
         """
         Validates the configuration values
@@ -300,6 +304,7 @@ class SystemCheckerCommand(command.Command):
             hashval = utils.hashfile(path, hashlib.md5())
             expected_hashval = self.config.md5_hashes[index]
             if expected_hashval == '':
+                # assume this is the first run
                 self.config.set_expected_hash(index, hashval)
 
             elif hashval != expected_hashval:
@@ -314,6 +319,8 @@ class SystemCheckerCommand(command.Command):
                                  modified,
                                  'Warning',
                                  'MD5 mismatch')
+
+                # update the new expected hash to this value
                 self.config.set_expected_hash(index, hashval)
 
             index = index + 1

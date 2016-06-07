@@ -15,7 +15,6 @@ import logging
 import logging.config
 import sys
 import threading
-import time
 
 import argparse
 from wavefront import utils
@@ -135,7 +134,6 @@ def main():
     Main function
     """
 
-    utils.setup_signal_handlers()
     logging.basicConfig(format='%(levelname)s: %(message)s',
                         level=logging.INFO)
     args = parse_args()
@@ -159,6 +157,8 @@ def execute_commands(args):
     args - argparse object or WavefrontConfiguration
     """
 
+    logger = logging.getLogger()
+    utils.setup_signal_handlers(logger)
     if isinstance(args, WavefrontConfiguration):
         try:
             logging.config.fileConfig(args.config_file_path)
@@ -173,8 +173,13 @@ def execute_commands(args):
             threads.append(thread)
             thread.start()
 
-        for thread in threads:
-            thread.join()
+        threads_alive = threads[:]
+        while threads_alive and not utils.CANCEL_WORKERS_EVENT.is_set():
+            for thread in threads:
+                if thread.is_alive():
+                    thread.join(1)
+                else:
+                    threads_alive.remove(thread)
 
     else:
         execute_command(args.command, args)

@@ -99,7 +99,8 @@ class WavefrontMetricsWriter(MetricsWriter):
         """
         Generates the line in the Wavefront proxy format.
         """
-        line = '{} {} {} source="{}"'.format(name, value, timestamp, source)
+        line = '{} {} {} source="{}"'.format(
+            name, value, long(timestamp), source)
         if point_tags is not None:
             for tag_key, tag_value in point_tags.iteritems():
                 line = line + ' "{}"="{}"'.format(tag_key.lower(), tag_value)
