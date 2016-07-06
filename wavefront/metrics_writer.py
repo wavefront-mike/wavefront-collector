@@ -103,7 +103,7 @@ class WavefrontMetricsWriter(MetricsWriter):
             name, value, long(timestamp), source)
         if point_tags is not None:
             for tag_key, tag_value in point_tags.iteritems():
-                line = line + ' "{}"="{}"'.format(tag_key.lower(), tag_value)
+                line = line + ' "{}"="{}"'.format(tag_key, tag_value)
         return line
 
 class OpenTSDBMetricsWriter(MetricsWriter):

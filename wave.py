@@ -8,8 +8,6 @@ generated from the commands currently installed.
 from __future__ import print_function
 
 import ConfigParser
-import daemon
-import daemon.pidfile
 import importlib
 import logging
 import logging.config
@@ -17,6 +15,8 @@ import sys
 import threading
 
 import argparse
+import daemon
+import daemon.pidfile
 from wavefront import utils
 
 
@@ -26,9 +26,13 @@ INSTALLED_COMMANDS = {
         'wavefront.newrelic',
         'NewRelicMetricRetrieverCommand'
         ),
-    'awsmetrics': (
+    'awsbilling': (
         'wavefront.awsmetrics',
-        'AwsMetricsCommand'
+        'AwsBillingMetricsCommand'
+        ),
+    'awscloudwatch': (
+        'wavefront.awsmetrics',
+        'AwsCloudwatchMetricsCommand'
         ),
     'systemchecker': (
         'wavefront.system_checker',
@@ -168,7 +172,8 @@ def execute_commands(args):
         threads = []
         for conf in args.thread_configs:
             targs = (conf.command, conf.args,)
-            thread = threading.Thread(target=execute_command, args=targs)
+            thread = threading.Thread(target=execute_command, args=targs,
+                                      name=conf.command)
             thread.daemon = True
             threads.append(thread)
             thread.start()

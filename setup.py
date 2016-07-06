@@ -6,15 +6,15 @@ import setuptools
 import setuptools.command.install
 
 setuptools.setup(
-    name='wavefront-integration',
-    version='0.0.1',
+    name='wavefront_integration',
+    version='0.0.2',
     author='Wavefront',
     author_email='mike@wavefront.com',
     description=('Wavefront Integration Tools'),
     license='BSD',
     keywords='wavefront',
     url='https://www.wavefront.com',
-    install_requires=['wavefront_client', 'python-dateutil', 'logging', 'python-daemon', 'boto3'],
+    install_requires=['wavefront_client', 'python-dateutil', 'logging', 'python-daemon', 'boto3', 'ndg-httpsclient'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Topic :: Utilities',
@@ -22,5 +22,5 @@ setuptools.setup(
     ],
     package_data={'wavefront': ['data/*']},
     packages=['wavefront'],
-    scripts=['wavefront.py']
+    scripts=['wf']
 )

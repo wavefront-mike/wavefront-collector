@@ -36,6 +36,13 @@ class SystemCheckerConfiguration(Configuration):
             config_file_path=config_file_path)
 
         self.cache_location = self.get('global', 'cache_dir', '/tmp')
+        self.md5_config = utils.Configuration(
+            os.path.join(self.cache_location, 'wf_md5_hashes.conf'), True)
+        self.md5_hashes = {}
+        if self.md5_config.has_section('hashes'):
+            items = self.md5_config.config.items('hashes')
+            for item in items:
+                self.md5_hashes[item[0]] = item[1]
         self.source_name = self.get('global', 'source_name',
                                     socket.gethostname())
         self.log_requests = self.getboolean('global', 'log_requests', False)
@@ -50,11 +57,6 @@ class SystemCheckerConfiguration(Configuration):
         self.core_patterns = self.getlist('cores', 'patterns', [])
 
         self.md5_files = self.getlist('md5', 'files', [])
-        self.md5_hashes = self.getlist('md5', 'expected_hashes', [])
-
-        if len(self.md5_files) > len(self.md5_hashes):
-            for i in range(len(self.md5_hashes), len(self.md5_files)):
-                self.md5_hashes[i] = ''
 
     def validate(self):
         """
@@ -63,22 +65,21 @@ class SystemCheckerConfiguration(Configuration):
         ValueError when md5 files length does not equal md5 hashes length
         """
 
-        if len(self.md5_files) != len(self.md5_hashes):
-            raise ValueError('md5.files must have the same number of items '
-                             'as md5.expected_hashes')
+        if not os.path.exists(self.cache_location):
+            os.mkdir(self.cache_location)
 
-    def set_expected_hash(self, index, hashval):
+    def set_expected_hash(self, filename, hashval):
         """
         Sets the expected hash value for the given index
 
         Arguments:
-        index - the index in the self.md5_hashes array to set (0 based)
+        filename - the name of the file
         hashval - the md5 hash value to update to
         """
 
-        self.md5_hashes[index] = hashval
-        self.config.set('md5', 'expected_hashes', ','.join(self.md5_hashes))
-        self.save()
+        self.md5_hashes[filename] = hashval
+        self.md5_config.set('hashes', filename, hashval)
+        self.md5_config.save()
 
 class SystemCheckerCommand(command.Command):
     """
@@ -223,6 +224,7 @@ class SystemCheckerCommand(command.Command):
         """
 
         if md5 and self._has_event(md5, etype):
+            self.logger.warn('Event %s already seen (md5: %s)', name, md5)
             return True
 
         events_api = wavefront_client.EventsApi()
@@ -230,6 +232,7 @@ class SystemCheckerCommand(command.Command):
         sleep_time = 1
         successful = False
         while attempts < 5 and not utils.CANCEL_WORKERS_EVENT.is_set():
+            self.logger.info('%s Creating event %s', self.description, name)
             try:
                 if start == end:
                     events_api.create_new_event(
@@ -293,25 +296,40 @@ class SystemCheckerCommand(command.Command):
                                              created, created, 'Warning',
                                              'Core')
 
-    def _check_file_hash(self):
+    def _check_hashes(self):
         """
         Checks the hash (md5 currently) for each file configured
         """
 
-        index = 0
         for path in self.config.md5_files:
-            self.logger.info('Checking MD5 for %s ...', path)
-            hashval = utils.hashfile(path, hashlib.md5())
-            expected_hashval = self.config.md5_hashes[index]
-            if expected_hashval == '':
-                # assume this is the first run
-                self.config.set_expected_hash(index, hashval)
+            try:
+                self._check_file_hash(path)
+            except IOError as ioe:
+                self.logger.error('Unable to check MD5 for %s: %s',
+                                  path, str(ioe))
 
-            elif hashval != expected_hashval:
+    def _check_file_hash(self, path):
+        """
+        Check a specific path's hash against its expected value
+        """
+
+        self.logger.info('Checking MD5 for %s ...', path)
+        hashval = utils.hashfile(path, hashlib.md5())
+        abspath = os.path.abspath(path)
+        if (abspath not in self.config.md5_hashes or
+                not self.config.md5_hashes[abspath]):
+            # assume this is the first run
+            self.config.set_expected_hash(abspath, hashval)
+
+        else:
+            expected_hashval = self.config.md5_hashes[abspath]
+
+            if expected_hashval != hashval:
                 modified = os.path.getmtime(path) * 1000
-                self.logger.warning('[%s] MD5 mismatch. '
+                self.logger.warning('[%s: %s] MD5 mismatch. '
                                     'Expected: %s; Found: %s',
-                                    path, expected_hashval, hashval)
+                                    self.description, path, expected_hashval,
+                                    hashval)
                 self._send_event(None,
                                  'MD5 mismatch (' + path + ')',
                                  'MD5 mismatch (' + path + ')',
@@ -321,9 +339,7 @@ class SystemCheckerCommand(command.Command):
                                  'MD5 mismatch')
 
                 # update the new expected hash to this value
-                self.config.set_expected_hash(index, hashval)
-
-            index = index + 1
+                self.config.set_expected_hash(abspath, hashval)
 
     def _execute(self):
         """
@@ -331,4 +347,4 @@ class SystemCheckerCommand(command.Command):
         """
 
         self._check_for_core_dumps()
-        self._check_file_hash()
+        self._check_hashes()

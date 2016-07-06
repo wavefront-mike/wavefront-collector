@@ -3,6 +3,7 @@ Utility functions
 """
 
 import ConfigParser
+import csv
 import datetime
 import os.path
 import re
@@ -56,16 +57,27 @@ class Configuration(object):
     Base class for configurations that read from an INI file
     """
 
-    def __init__(self, config_file_path):
+    def __init__(self, config_file_path, create_if_not_exist=False):
         super(Configuration, self).__init__()
-        if not os.path.exists(config_file_path):
+        if not os.path.exists(config_file_path) and not create_if_not_exist:
             raise ValueError('Configuration file %s does not exist' %
                              (config_file_path))
         self.config_file_path = config_file_path
         self.config = ConfigParser.ConfigParser()
         self.config.read(config_file_path)
 
-    def get(self, section, key, default_value):
+    def has_section(self, section):
+        """
+        Checks to see if the given section exists
+        """
+        try:
+            self.config.get(section, "test")
+        except ConfigParser.NoOptionError:
+            return True
+        except ConfigParser.NoSectionError:
+            return False
+            
+    def get(self, section, key, default_value, default_section=None):
         """
         Gets a value from the configuration and returns the default if the
         section or key does not exist.
@@ -79,15 +91,20 @@ class Configuration(object):
         try:
             value = self.config.get(section, key)
         except ConfigParser.NoOptionError:
-            return default_value
+            value = None
         except ConfigParser.NoSectionError:
-            return default_value
+            value = None
+
 
         if value is None:
-            return default_value
-        return value
+            if default_section:
+                return self.get(default_section, key, default_value, None)
+            else:
+                return default_value
+        else:
+            return value
 
-    def getdate(self, section, key, default_value):
+    def getdate(self, section, key, default_value, default_section=None):
         """
         Gets a value from the configuration and returns the default if the
         section or key does not exist.  Assumes the value is stored as a
@@ -98,14 +115,17 @@ class Configuration(object):
         key - the key in the section to retrieve
         default_value - the default value to return when section/key not found
         """
+
         value = self.get(section, key, None)
         if value:
             return (dateutil.parser.parse(value)
                     .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
+        elif default_section:
+            return self.getdate(default_section, key, default_value, None)
         else:
             return default_value
 
-    def getboolean(self, section, key, default_value):
+    def getboolean(self, section, key, default_value, default_section=None):
         """
         Gets a value from the configuration and returns the default if the
         section or key does not exist.
@@ -119,15 +139,21 @@ class Configuration(object):
         try:
             value = self.config.getboolean(section, key)
         except ConfigParser.NoOptionError:
-            return default_value
+            value = None
         except ConfigParser.NoSectionError:
-            return default_value
+            value = None
 
         if value is None:
-            return default_value
-        return value
+            if default_section:
+                return self.getboolean(
+                    default_section, key, default_value, None)
+            else:
+                return default_value
+        else:
+            return value
 
-    def getlist(self, section, key, default_value, delimiter=','):
+    def getlist(self, section, key, default_value, default_section=None,
+                delimiter=',', trim=False):
         """
         Gets a value from the configuration and returns the default if the
         section or key does not exist.  Value is assumed to be comma-separated
@@ -138,18 +164,48 @@ class Configuration(object):
         key - the key in the section to retrieve
         default_value - the default value to return when section/key not found
                         (assumed to be a list; not a string)
+        trim - trim all items in the list
         """
 
         try:
             value = self.config.get(section, key)
+            if value:
+                value = value.split(delimiter)
         except ConfigParser.NoOptionError:
-            return default_value
+            value = None
         except ConfigParser.NoSectionError:
-            return default_value
+            value = None
 
         if value is None:
-            return default_value
-        return value.split(delimiter)
+            if default_section:
+                value = self.getlist(default_section, key, default_value, None)
+            else:
+                value = default_value
+
+        if trim:
+            return map(str.strip, value)
+        else:
+            return value
+
+    def set(self, section, key, value, create_section=True):
+        """
+        Sets the value in the given section.  Creates the section if it does
+        not exist.
+        Arguments:
+        section - the section name
+        key - the key in the section to set
+        value - the value to set
+        create_section - create section if it does not exist?
+        """
+
+        try:
+            self.config.set(section, key, value)
+        except ConfigParser.NoSectionError as nosection:
+            if create_section:
+                self.config.add_section(section)
+                self.config.set(section, key, value)
+            else:
+                raise nosection
 
     def save(self):
         """
@@ -377,3 +433,54 @@ def hashfile(file_path, hasher, blocksize=65536):
             hasher.update(buf)
             buf = afile.read(blocksize)
         return hasher.hexdigest()
+
+class CsvFileRow(object):
+    """
+    Row from CsvFile
+    """
+
+    def __init__(self, csvfile, row):
+        """
+        """
+        self.csvfile = csvfile
+        self.row = row
+
+    def __getitem__(self, name):
+        if name not in self.csvfile.header_key_to_index:
+            raise ValueError('%s not in %s' %
+                            (name, str(self.csvfile.header_key_to_index)))
+        index = self.csvfile.header_key_to_index[name]
+        return self.row[index]
+
+class CsvFile(object):
+    """
+    Simple interface to the csv.reader
+    """
+
+    def __init__(self, reader, header_row_index=1):
+        """
+        Construct this instance.
+        Arguments:
+        reader - see csv.reader() csvfile parameter definition
+        """
+
+        self.csvreader = csv.reader(reader)
+
+        # build map for header name to index
+        index = 0
+        while index < header_row_index:
+            header_row = self.csvreader.next()
+            index = index + 1
+
+        self.header_key_to_index = {}
+        index = 0
+        for name in header_row:
+            self.header_key_to_index[name] = index
+            index = index + 1
+
+    def __iter__(self):
+        return self
+
+    #pylint: disable=missing-docstring
+    def next(self):
+        return CsvFileRow(self, self.csvreader.next())
