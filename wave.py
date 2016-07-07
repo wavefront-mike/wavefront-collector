@@ -52,10 +52,18 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Wavefront command line tool')
     parser.add_argument('-c', help='Specify a configuration file',
                         dest='config')
+    parser.add_argument('--daemon', action='store_true', default=False,
+                        help='Run in background (default is false)')
+    parser.add_argument('--out', default='./wavefront.out',
+                        help=('The path to the file where stdout/stderr '
+                              'should be redirected when running --daemon'))
+    parser.add_argument('--pid', default='./wavefront.pid',
+                        help='The path to the PID file when running --daemon')
+
     args, _ = parser.parse_known_args()
     if args.config:
         print('Reading configuration file %s ...' % (args.config))
-        return WavefrontConfiguration(args.config)
+        return WavefrontConfiguration(args.config, args)
 
     parser = argparse.ArgumentParser(description='Wavefront command line tool')
     subparsers = parser.add_subparsers(
@@ -115,14 +123,23 @@ class WavefrontConfiguration(utils.Configuration):
     Configuration class wrapping the wavefront configuration file
     """
 
-    def __init__(self, config_file_path):
+    def __init__(self, config_file_path, command_line_args):
         super(WavefrontConfiguration, self).__init__(
             config_file_path=config_file_path)
 
-        self.daemon = self.getboolean('global', 'daemon', False)
+        if command_line_args.daemon:
+            self.daemon = command_line_args.daemon
+        else:
+            self.daemon = self.getboolean('global', 'daemon', False)
         self.verbose = self.getboolean('global', 'verbose', False)
-        self.out = self.get('global', 'out', 'wavefront.out')
-        self.pid = self.get('global', 'pid', 'wavefront.pid')
+        if command_line_args.out:
+            self.out = command_line_args.out
+        else:
+            self.out = self.get('global', 'out', 'wavefront.out')
+        if command_line_args.pid:
+            self.pid = command_line_args.pid
+        else:
+            self.pid = self.get('global', 'pid', 'wavefront.pid')
         self.debug = self.getboolean('global', 'debug', False)
 
         names = self.getlist('global', 'threads', [])
@@ -215,10 +232,13 @@ def get_command_object(command_name):
     command_name - the installed commands command key
     """
 
-    details = INSTALLED_COMMANDS[command_name]
-    command_module = importlib.import_module(details[0])
-    class_name = details[1]
-    return getattr(command_module, class_name)()
+    if command_name in INSTALLED_COMMANDS:
+        details = INSTALLED_COMMANDS[command_name]
+        command_module = importlib.import_module(details[0])
+        class_name = details[1]
+        return getattr(command_module, class_name)()
+    else:
+        raise ValueError('Command ' + command_name + ' not found')
 
 if __name__ == '__main__':
     main()

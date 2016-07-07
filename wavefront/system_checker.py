@@ -282,6 +282,9 @@ class SystemCheckerCommand(command.Command):
 
         for path in self.config.core_locations:
             self.logger.info('Looking for core dump files in %s ...', path)
+            if not os.path.exists(path):
+                self.logger.warning('Path %s does not exist.', path)
+
             for filename in os.listdir(path):
                 for pattern in self.config.core_patterns:
                     if pattern:
@@ -293,8 +296,9 @@ class SystemCheckerCommand(command.Command):
                             self._send_event(hashval,
                                              'Core found',
                                              'Core file found at ' + fullpath,
-                                             created, created, 'Warning',
-                                             'Core')
+                                             created, created,
+                                             'Warning',
+                                             'core-dump')
 
     def _check_hashes(self):
         """
@@ -331,12 +335,12 @@ class SystemCheckerCommand(command.Command):
                                     self.description, path, expected_hashval,
                                     hashval)
                 self._send_event(None,
-                                 'MD5 mismatch (' + path + ')',
-                                 'MD5 mismatch (' + path + ')',
+                                 'File Change (' + path + ')',
+                                 'File Change (' + path + ')',
                                  modified,
                                  modified,
-                                 'Warning',
-                                 'MD5 mismatch')
+                                 'Informational',
+                                 'file-change')
 
                 # update the new expected hash to this value
                 self.config.set_expected_hash(abspath, hashval)

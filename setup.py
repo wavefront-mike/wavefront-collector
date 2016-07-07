@@ -1,18 +1,18 @@
 """
-Setup script for the Wavefront Integration Tools
+Setup script for the Wavefront collector tools
 """
 
 import setuptools
 import setuptools.command.install
 
 setuptools.setup(
-    name='wavefront_integration',
-    version='0.0.2',
+    name='wavefront_collector',
+    version='0.0.3',
     author='Wavefront',
     author_email='mike@wavefront.com',
-    description=('Wavefront Integration Tools'),
+    description=('Wavefront Collector Tools'),
     license='BSD',
-    keywords='wavefront',
+    keywords='wavefront wavefront_integration collector metrics',
     url='https://www.wavefront.com',
     install_requires=['wavefront_client', 'python-dateutil', 'logging', 'python-daemon', 'boto3', 'ndg-httpsclient'],
     classifiers=[
@@ -22,5 +22,5 @@ setuptools.setup(
     ],
     package_data={'wavefront': ['data/*']},
     packages=['wavefront'],
-    scripts=['wf']
+    scripts=['wf', 'wavefront-collector']
 )
