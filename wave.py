@@ -200,7 +200,7 @@ def execute_commands(args):
             for thread in threads:
                 if thread.is_alive():
                     thread.join(1)
-                else:
+                elif thread in threads_alive:
                     threads_alive.remove(thread)
 
     else:

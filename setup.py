@@ -7,7 +7,7 @@ import setuptools.command.install
 
 setuptools.setup(
     name='wavefront_collector',
-    version='0.0.3',
+    version='0.0.5',
     author='Wavefront',
     author_email='mike@wavefront.com',
     description=('Wavefront Collector Tools'),
