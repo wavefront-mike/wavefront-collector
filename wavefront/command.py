@@ -19,8 +19,9 @@ class Command(object):
         super(Command, self).__init__()
         self.verbose = False
         self.logger = logging.getLogger()
-        fmt = logging.Formatter('%(levelname)s: %(threadName)s %(message)s')
-        self.logger.root.handlers[0].setFormatter(fmt)
+        if len(self.logger.root.handlers) > 0:
+            fmt = logging.Formatter('%(levelname)s: %(thread)d %(message)s')
+            self.logger.root.handlers[0].setFormatter(fmt)
         self.description = kwargs.get('description', 'Wavefront command')
 
     def _init_logging(self):
