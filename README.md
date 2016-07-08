@@ -11,7 +11,8 @@ The `wavefront` script facilitates external integrations with Wavefront.  Each n
 | Command Name | Description | Python File |
 | ------------ | ----------- | ----------- |
 | [newrelic](docs/README.newrelic.md) | New Relic metrics imported into Wavefront.  Additionally, supports executing insight queries. | [newrelic.py](wavefront/newrelic.py) |
-| [awsmetrics](docs/README.awsmetrics.md) | AWS Cloudwatch metrics | [awsmetrics.py](wavefront/awsmetrics.py) |
+| [awscloudwatch](docs/README.awsmetrics.md) | AWS Cloudwatch metrics | [awsmetrics.py](wavefront/awsmetrics.py) |
+| [awsbilling](docs/README.awsbilling.md) | AWS Billing metrics | [awsmetrics.py](wavefront/awsmetrics.py) |
 | [systemchecker](docs/README.system_checker.md) | System Checker sends events to Wavefront when core dump files are found or when files have changed | [system_checker.py](wavefront/system_checker.py) |
 
 

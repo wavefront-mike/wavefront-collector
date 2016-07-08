@@ -233,18 +233,19 @@ def sanitize_name(_name, replace_map=None):
     """
 
     if not replace_map:
-        replace_map = {
-            '*': 'all',
-            '.': '_',
-            '//': '.',
-            '/': '.'
-        }
+        replace_map = [
+            {'*': 'all'},
+            {'.': '_'},
+            {'//': '.'},
+            {'/': '.'}
+        ]
 
     # see http://stackoverflow.com/a/27086669 for details on performance
     # of various methods of doing this
     name = _name.lower()
-    for search, replace in replace_map.iteritems():
-        name = name.replace(search, replace)
+    for items in replace_map:
+        for search, replace in items.iteritems():
+            name = name.replace(search, replace)
     name = re.sub(r'[^a-z\-_0-9\.]', '_', name)
     return name
 
