@@ -20,12 +20,14 @@ The `wavefront` script facilitates external integrations with Wavefront.  Each n
 The `wf` (or `wave.py`) script is the primary interface to this utility.  The `wf` script is used to run one or more of the subcommands at one time and to pass the configuration file to each.
 
 It has 2 methods of operation:
+
 1. [Command line](#cmdline)
 2. [Configuration file](#configfile)
 
 ### <a name="cmdline">Command Line</a>
 The command line operation allows you to run a single subcommand in either the foreground or background.
 The `wf` script in command line mode has the following options:
+
 | Argument | Option | Description |
 | -------- | ------ | ----------- |
 | --daemon | N/A    | Run in the background as a daemon. (Default is foreground without this option) |
@@ -38,6 +40,7 @@ The `wf` script in command line mode has the following options:
 The configuration file operation mode allows you to run one or more subcommands.
 
 The `wf` script in configuration file mode has the following options:
+
 | Argument | Option | Description |
 | -------- | ------ | ----------- |
 | -c | FILE | The configuration file to describe the commands to execute.  This is the option that puts the script into "configuration file mode". See below for details on the configuration file. |
@@ -56,6 +59,7 @@ The `wf` script in configuration file mode has the following options:
 
 ##### Section: thread-[thread name]
 There should be one section per name listed in the `threads` key in the `global` section.
+
 | Configuration Key | Required? | Default | Description |
 | ----------------- | --------- | ------- | ----------- |
 | command | Y | None | The name of the command to execute |
