@@ -35,38 +35,118 @@ class SystemCheckerConfiguration(Configuration):
         super(SystemCheckerConfiguration, self).__init__(
             config_file_path=config_file_path)
 
+        # section: global
         self.cache_location = self.get('global', 'cache_dir', '/tmp')
-        self.md5_config = utils.Configuration(
-            os.path.join(self.cache_location, 'wf_md5_hashes.conf'), True)
-        self.md5_hashes = {}
-        if self.md5_config.has_section('hashes'):
-            items = self.md5_config.config.items('hashes')
-            for item in items:
-                self.md5_hashes[item[0]] = item[1]
         self.source_name = self.get('global', 'source_name',
                                     socket.gethostname())
         self.log_requests = self.getboolean('global', 'log_requests', False)
         self.ignore_ssl_cert_errors = self.getboolean(
             'global', 'ignore_ssl_cert_errors', False)
 
+        # section: wavefront
         self.wf_api_key = self.get('wavefront', 'api_key', None)
         self.wf_api_base = self.get('wavefront', 'api_base',
                                     'https://metrics.wavefront.com')
 
-        self.core_locations = self.getlist('cores', 'paths', [])
-        self.core_patterns = self.getlist('cores', 'patterns', [])
+        # section: find_files
+        self.find_file_locations = self.getlist('find_files', 'paths', [])
+        self.find_file_patterns = self.getlist('find_files', 'patterns', [])
+        self.find_file_event_names = self.getlist(
+            'find_files', 'event_names', [])
 
-        self.md5_files = self.getlist('md5', 'files', [])
+        # section: files_changed
+        self.file_changed_files = self.getlist('file_changes', 'files', [])
+        self.file_changed_event_names = self.getlist(
+            'file_changes', 'event_names', [])
+
+        # other instance variables (non-configuration)
+        self.md5_config = None
+        self.md5_hashes = None
+
+        # initialize the cache directory
+        self._init_cache()
+
+    def _init_cache(self):
+        """
+        Initializes the cache directory
+        """
+
+        if not os.path.exists(self.cache_location):
+            os.mkdir(self.cache_location)
+            os.mkdir(os.path.join(self.cache_location, 'file-changes'))
+            os.mkdir(os.path.join(self.cache_location, 'find-files'))
+
+        self.md5_config = utils.Configuration(os.path.join(
+            self.cache_location, 'file-changes', 'wf_md5_hashes.conf'), True)
+        self.md5_hashes = {}
+        if self.md5_config.has_section('hashes'):
+            items = self.md5_config.config.items('hashes')
+            for item in items:
+                self.md5_hashes[item[0]] = item[1]
+
+        # create directory to store hashes of files found
+        for path in self.find_file_locations:
+            cache_path = os.path.join(
+                self.cache_location, 'find-files', utils.sanitize_name(path))
+            if not os.path.exists(cache_path):
+                os.makedirs(cache_path)
+
+    def _get_file_found_cache_path(self, directory, filename, hashval):
+        """
+        Gets the file for a specific file and hash value combo for the cache
+        directory.
+        Arguments:
+        directory - the directory where the file was found
+        filename - the file name of the file found
+        hashval - the md5 hash value of the file found
+        """
+
+        cache_path = os.path.join(
+            self.cache_location, 'find-files', utils.sanitize_name(directory))
+        sfilename = utils.sanitize_name(filename) + '_' + hashval
+        return os.path.join(cache_path, sfilename)
+
+    def has_file_found_cache_path(self, directory, filename, hashval):
+        """
+        Checks to see if the given file has already been reported.
+        Arguments:
+        directory - the directory where the file was found
+        filename - the file name of the file found
+        hashval - the md5 hash value of the file found
+        """
+
+        final_path = self._get_file_found_cache_path(
+            directory, filename, hashval)
+        return os.path.exists(final_path)
+
+    def set_file_found(self, directory, filename, hashval):
+        """
+        Sets the file was found and its hash value.
+        Arguments:
+        directory - the directory where the file was found
+        filename - the file name to the file found
+        hashval - the md5 hash value of the file found
+        """
+
+        final_path = self._get_file_found_cache_path(
+            directory, filename, hashval)
+        with open(final_path, 'a'):
+            os.utime(final_path, None)
 
     def validate(self):
         """
         Validates the configuration values
         Throws:
-        ValueError when md5 files length does not equal md5 hashes length
+        ValueError when length of find files locations array does not equal
+                   length of patterns and event names arrays
         """
 
-        if not os.path.exists(self.cache_location):
-            os.mkdir(self.cache_location)
+        if len(self.find_file_locations) != len(self.find_file_patterns):
+            raise ValueError('find_files:paths must have the same number of '
+                             'elements as find_files:patterns')
+        if len(self.find_file_locations) != len(self.find_file_event_names):
+            raise ValueError('find_files:paths must have the same number of '
+                             'elements as find_files:event_names')
 
     def set_expected_hash(self, filename, hashval):
         """
@@ -102,7 +182,8 @@ class SystemCheckerCommand(command.Command):
         Help text for this command.
         """
 
-        return "System Checker for core dump files, md5 changes, etc"
+        return ('System Checker for finding files matching a pattern, '
+                'files that changed, etc.')
 
     #pylint: disable=no-self-use
     def add_arguments(self, parser):
@@ -146,68 +227,13 @@ class SystemCheckerCommand(command.Command):
         wavefront_client.configuration.verify_ssl = (
             not self.config.ignore_ssl_cert_errors)
 
-    def _get_event_file(self, etype):
-        """
-        Gets the file where md5's are stored for the given event type
-        Arguments:
-        etype - event type
-
-        Returns:
-        Path to file where MD5 should be stored/searched
-        """
-
-        return os.path.join(self.config.cache_location, etype + '.cache')
-
-    def _has_event(self, md5, etype):
-        """
-        Checks to see if the MD5 is in the file path
-
-        Arguments:
-        md5 - the hash key
-        etype - event type
-
-        Returns:
-        True if MD5 is found in the file path; false o/w
-        """
-
-        file_path = self._get_event_file(etype)
-        if not os.path.exists(file_path):
-            return False
-
-        self.logger.debug('Looking for "%s" in %s ...', md5, file_path)
-        with open(file_path, 'r') as rmbr:
-            for line in rmbr:
-                if not line:
-                    continue
-
-                if md5 == line.strip():
-                    self.logger.info('Already seen %s for %s', md5, etype)
-                    return True
-
-        return False
-
-    def _remember_event(self, md5, etype):
-        """
-        Stores the MD5 of an event in the file path sepcified.
-
-        Arguments:
-        md5 - the hash key
-        etype - event type for finding the file path
-        """
-
-        file_path = self._get_event_file(etype)
-        with open(file_path, 'a') as rmbr:
-            rmbr.write(md5)
-            rmbr.write('\n')
-
     #pylint: disable=bare-except
     #pylint: disable=too-many-arguments
-    def _send_event(self, md5, name, description, start, end, severity, etype):
+    def _send_event(self, name, description, start, end, severity, etype):
         """
         Sends event to wavefront API
 
         Arguments:
-        md5 - the md5 key for this event (will not resend)
         name - event name
         description -
         start -
@@ -215,17 +241,9 @@ class SystemCheckerCommand(command.Command):
         severity -
         etype - event type
 
-        See Also:
-        _remember_event()
-        _has_event()
-
         Returns:
         True if successfully created event, false o/w
         """
-
-        if md5 and self._has_event(md5, etype):
-            self.logger.warn('Event %s already seen (md5: %s)', name, md5)
-            return True
 
         events_api = wavefront_client.EventsApi()
         attempts = 0
@@ -270,51 +288,67 @@ class SystemCheckerCommand(command.Command):
                     time.sleep(sleep_time)
                     sleep_time = sleep_time * 2
 
-        if successful and md5:
-            self._remember_event(md5, etype)
-
         return successful
 
-    def _check_for_core_dumps(self):
+    def _check_for_files_matching(self):
         """
-        Checks for core dump files in the configured paths
+        Checks for files matching a pattern in the configured paths
         """
 
-        for path in self.config.core_locations:
-            self.logger.info('Looking for core dump files in %s ...', path)
+        self.logger.info('Checking files in ' +
+                         str(self.config.find_file_locations))
+        for path in self.config.find_file_locations:
+            self.logger.info('Looking for matching files in %s ...', path)
             if not os.path.exists(path):
                 self.logger.warning('Path %s does not exist.', path)
+                continue
 
             for filename in os.listdir(path):
-                for pattern in self.config.core_patterns:
-                    if pattern:
-                        if fnmatch.fnmatch(filename, pattern):
-                            fullpath = os.path.join(path, filename)
-                            self.logger.warning('Found core file %s', fullpath)
-                            created = os.path.getctime(fullpath)
-                            hashval = utils.hashfile(fullpath, hashlib.md5())
-                            self._send_event(hashval,
-                                             'Core found',
-                                             'Core file found at ' + fullpath,
-                                             created, created,
-                                             'Warning',
-                                             'core-dump')
+                loc = 0
+                for pattern in self.config.find_file_patterns:
+                    if pattern and fnmatch.fnmatch(filename, pattern):
+                        fullpath = os.path.join(path, filename)
+                        hashval = utils.hashfile(fullpath, hashlib.md5())
+                        if self.config.has_file_found_cache_path(
+                                path, filename, hashval):
+                            continue
+                        self.logger.warning('[%s: %s] Found file "%s" matching '
+                                            'pattern "%s"', self.description,
+                                            path, filename, pattern)
+                        created = os.path.getctime(fullpath)
+                        name = self.config.find_file_event_names[loc]
+                        if self._send_event(
+                                name + ' found',
+                                name + ' file found: ' + fullpath,
+                                created,
+                                created,
+                                'Warning',
+                                name):
+                            self.config.set_file_found(path, filename, hashval)
 
-    def _check_hashes(self):
+                        loc = loc + 1
+
+    def _check_for_files_changed(self):
         """
         Checks the hash (md5 currently) for each file configured
         """
 
-        for path in self.config.md5_files:
+        loc = 0
+        for path in self.config.file_changed_files:
             try:
-                self._check_file_hash(path)
+                self._check_file_hash(
+                    path, self.config.file_changed_event_names[loc])
             except IOError as ioe:
                 self.logger.error('Unable to check MD5 for %s: %s',
                                   path, str(ioe))
+            loc = loc + 1
 
-    def _check_file_hash(self, path):
+    def _check_file_hash(self, path, event_name):
         """
         Check a specific path's hash against its expected value
+        Arguments:
+        path - the full path to the file to check
+        event_name - the event name to use when creating an event (on hash chng)
         """
 
         self.logger.info('Checking MD5 for %s ...', path)
@@ -334,21 +368,22 @@ class SystemCheckerCommand(command.Command):
                                     'Expected: %s; Found: %s',
                                     self.description, path, expected_hashval,
                                     hashval)
-                self._send_event(None,
-                                 'File Change (' + path + ')',
+                self._send_event('File Change (' + path + ')',
                                  'File Change (' + path + ')',
                                  modified,
                                  modified,
                                  'Informational',
-                                 'file-change')
+                                 event_name)
 
                 # update the new expected hash to this value
                 self.config.set_expected_hash(abspath, hashval)
 
     def _execute(self):
         """
-        Starts looking for core dump files, etc as configured
+        Starts looking for matching files, changed files, etc as configured
         """
 
-        self._check_for_core_dumps()
-        self._check_hashes()
+        if not utils.CANCEL_WORKERS_EVENT.is_set():
+            self._check_for_files_matching()
+        if not utils.CANCEL_WORKERS_EVENT.is_set():
+            self._check_for_files_changed()

@@ -67,6 +67,7 @@ class Command(object):
         self._init_logging()
         while not utils.CANCEL_WORKERS_EVENT.is_set():
             try:
+                self.logger.info('Executing %s ...', self.description)
                 self._execute()
 
             except:
@@ -82,7 +83,6 @@ class Command(object):
             if not utils.CANCEL_WORKERS_EVENT.is_set():
                 self.logger.info('Sleeping for %ds ...', args.delay)
                 time.sleep(args.delay)
-                self.logger.info('Executing %s ...', self.description)
 
     def _execute(self):
         """

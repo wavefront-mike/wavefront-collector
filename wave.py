@@ -20,7 +20,8 @@ import daemon.pidfile
 from wavefront import utils
 
 
-# List of available commands to run
+# List of available commands to run.  This is currently hard-coded, but later
+# could (and should) be auto-generated from the commands installed.
 INSTALLED_COMMANDS = {
     'newrelic': (
         'wavefront.newrelic',
@@ -96,6 +97,10 @@ def parse_args():
                               'should be redirected when running --daemon'))
     parser.add_argument('--pid', default='./wavefront.pid',
                         help='The path to the PID file when running --daemon')
+    parser.add_argument('--delay', default='60', type=float,
+                        help=('The number of seconds to delay between each '
+                              'execution when running --daemon'))
+
     return parser.parse_args()
 
 #pylint: disable=too-few-public-methods
@@ -206,6 +211,8 @@ def execute_commands(args):
     else:
         execute_command(args.command, args)
 
+    logger.info('Done.')
+
 def execute_command(command_name, args):
     """
     Executes a single command (could be in a separate thread or main thread)
@@ -216,14 +223,14 @@ def execute_command(command_name, args):
 
     try:
         command_object = get_command_object(command_name)
-        command_object.logger.info('Executing %s', command_object.description)
         command_object.verbose = args.verbose
         command_object.execute(args)
 
     except Exception as command_err:
         if args is not None and args.verbose:
             raise
-        print(command_err.message)
+        print('Failed to execute command "%s": %s' %
+              (command_name, str(command_err)))
 
 def get_command_object(command_name):
     """
