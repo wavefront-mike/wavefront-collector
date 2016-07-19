@@ -9,6 +9,12 @@ The Wavefront collector facilitates external integrations to Wavefront. This all
 | AWS Billing | [awsbilling](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.awsbilling.md) | AWS Billing metrics retrieved from Billing Reports | [awsbilling.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/awsmetrics.py) |
 | Linux System Checker | [systemchecker](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.system_checker.md) | Creates Wavefront events when files matching a pattern are found (e.g., core dumps) or when files have changed | [system_checker.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/system_checker.py) |
 
+## Installation
+Install using pip or using the provided setup.py.
+
+```
+> pip install wavefront_collector
+```
 
 ## Executing an Integration
 The `wf` script (a symlink to `wave.py`) is the primary interface to running commands.  This script supports 2 methods of running a command:
