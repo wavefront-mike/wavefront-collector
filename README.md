@@ -24,7 +24,7 @@ The `wf` script (a symlink to `wave.py`) is the primary interface to running com
 
 
 ## <a name="cmdline">Run Method 1: Command Line</a>
-Runnning a command via the command line is the simplest method.  It allows you to execute a single integration in either the foreground or background.  In this mode, the `wf` script has the following command line options:
+Running a command via the command line is the simplest method.  It allows you to execute a single integration in either the foreground or background.  In this mode, the `wf` script has the following command line options:
 
 | Argument | Option       | Description |
 | -------- | ------------ | ----------- |

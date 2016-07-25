@@ -28,7 +28,7 @@ INSTALLED_COMMANDS = {
         'NewRelicMetricRetrieverCommand'
         ),
     'awsbilling': (
-        'wavefront.awsmetrics',
+        'wavefront.awsbilling',
         'AwsBillingMetricsCommand'
         ),
     'awscloudwatch': (

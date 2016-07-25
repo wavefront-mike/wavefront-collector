@@ -11,6 +11,7 @@ import setuptools.command.install
 # To use this code you will need to :
 #   1. Download and install pandoc  (http://pandoc.org/installing.html)
 #   2. pip install pypandoc
+# see: https://coderwall.com/p/qawuyq/use-markdown-readme-s-in-python-modules
 try:
     import pypandoc
     LONG_DESCRIPTION = pypandoc.convert_file(source_file='README.md',
