@@ -102,8 +102,12 @@ class AwsBillingDetailThreadConfiguration(object):
         Build a dictionary from a list of delimiter-separated key-value pairs
         Arguments:
         lst - list of strings
+        delimiter - delimiter between components of each string in the lst
+
         Returns:
-        dictionary
+        dictionary with the key being the string on the left side of
+        the delimiter and the value of the dictionary key being the string
+        on the right side
         """
 
         rtn = {}

@@ -76,7 +76,7 @@ class Configuration(object):
             return True
         except ConfigParser.NoSectionError:
             return False
-            
+
     def get(self, section, key, default_value, default_section=None):
         """
         Gets a value from the configuration and returns the default if the
@@ -449,7 +449,7 @@ class CsvFileRow(object):
     def __getitem__(self, name):
         if name not in self.csvfile.header_key_to_index:
             raise ValueError('%s not in %s' %
-                            (name, str(self.csvfile.header_key_to_index)))
+                             (name, str(self.csvfile.header_key_to_index)))
         index = self.csvfile.header_key_to_index[name]
         return self.row[index]
 

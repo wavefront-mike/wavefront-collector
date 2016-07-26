@@ -286,6 +286,9 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
     #pylint: disable=too-many-statements
     def _process_list_metrics_response(self, metrics, sub_account, region):
         """
+        This function is called by _process_cloudwatch_region() after calling
+        list_metrics() API.
+
         Loops over all metrics and call GetMetricStatistics() on each that are
         included by the configuration.
 
@@ -294,7 +297,7 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
         sub_account - the AwsSubAccount object representing the top level
         """
 
-        cloudwatch_config = self.config.get_cloudwatch_config(region)
+        cloudwatch_config = self.config.get_region_config(region)
         start = cloudwatch_config.start_time
         end = cloudwatch_config.end_time
         session = sub_account.get_session(region, False)
@@ -416,7 +419,7 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
         region - the region name (us-west-1, etc)
         """
 
-        cloudwatch_config = self.config.get_cloudwatch_config(region)
+        cloudwatch_config = self.config.get_region_config(region)
         cloudwatch_config.update_start_end_times()
         self.logger.info('Loading metrics %s - %s (Region: %s, Namespace: %s)',
                          str(cloudwatch_config.start_time),
