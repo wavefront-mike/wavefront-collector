@@ -1,5 +1,5 @@
 # Overview
-This command retrieves AWS CloudWatch metrics.  The metrics retrieved are configurable as are the stats for each metric.
+The AWS Cloudwatch command (awscloudwatch) retrieves AWS CloudWatch metrics.  The metrics retrieved are configurable as are the stats for each metric.
 
 # Processing Overview
 Each region specified in the `regions` configuration option is executed in its own thread in parallel.  The metrics configuration file is scanned to find all namespaces that should be retrieved from the [ListMetrics()](http://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html) API.  Once a list of metrics is returned, a set of threads (the number defined by the `workers` configuration value) begin processing all the metrics.  Each worker calls [GetMetricStatistics()](http://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricStatistics.html) on the Namespace/MetricName requesting at most an entire day's worth of data.  If the script has not run in more than a day, this API is called multiple times.  Each metric and its corresponding value returned from the GetMetricStatistics() API is sent to the proxy.
@@ -14,7 +14,7 @@ The configuration is retrieved from and stored in an INI-formatted file with mul
 
 This configuration file also acts as a fileconfig for the logger.  See [fileConfig definition](https://docs.python.org/2/library/logging.config.html#logging.config.fileConfig) for more details on how to configure logging.
 
-A sample configuration is provided [here](https://github.com/wavefront-mike/wavefront-collector/tree/master/data/awsmetrics-sample-configuration/awsmetrics.conf).
+A sample configuration is provided [here](https://github.com/wavefront-mike/wavefront-collector/tree/master/data/awscloudwatch-sample-configuration/awscloudwatch.conf).
 
 ## Section: cloudwatch
 For each of the items in this section, the default value comes from the `cloudwatch` section.  The value can be overridden in a region-specific section named `cloudwatch_<region name>`.  Any (or all) values can be overridden in the region-specific section.  Order or presidence is: region-specific -> `cloudwatch` section -> (code default value).
@@ -69,7 +69,7 @@ The metrics configuration file describes the metrics and their stats which shoul
 
 This configuration file should contain a JSON dictionary stored at the top level of the configuration file object under the "metrics" key.
 
-The default configuration is provided [here](https://github.com/wavefront-mike/wavefront-collector/tree/master/data/awsmetrics-sample-configuration/aws.json.conf).
+The default configuration is provided [here](https://github.com/wavefront-mike/wavefront-collector/tree/master/data/awscloudwatch-sample-configuration/aws.json.conf).
 
 Each key in the "metrics" object is a regular expression and the value is an object with the following keys:
     * stats

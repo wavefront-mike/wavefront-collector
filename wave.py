@@ -32,7 +32,7 @@ INSTALLED_COMMANDS = {
         'AwsBillingMetricsCommand'
         ),
     'awscloudwatch': (
-        'wavefront.awsmetrics',
+        'wavefront.awscloudwatch',
         'AwsCloudwatchMetricsCommand'
         ),
     'systemchecker': (

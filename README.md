@@ -1,12 +1,12 @@
 ## Overview
-The Wavefront collector facilitates external integrations to Wavefront. This allows metrics from external services such as New Relic to be pulled into Wavefront. Each integration is a executed via this utility using the command name specified in the table below.
+The Wavefront collector facilitates external integrations with Wavefront. This allows metrics from external services such as New Relic to be pulled into Wavefront. Each integration is a executed via this utility using the command name specified in the table below.
 
 ## Current Integrations
 | Integration | Command Name | Description | Python File |
 | --- | --- | --- | --- |
 | New Relic | [newrelic](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.newrelic.md) | Extracts metrics from New Relic API | [newrelic.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/newrelic.py) |
-| AWS Cloudwatch | [awscloudwatch](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.awsmetrics.md) | Metrics pulled from AWS Cloudwatch | [awsmetrics.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/awsmetrics.py) |
-| AWS Billing | [awsbilling](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.awsbilling.md) | AWS Billing metrics retrieved from Billing Reports | [awsbilling.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/awsmetrics.py) |
+| AWS Cloudwatch | [awscloudwatch](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.awscloudwatch.md) | Metrics pulled from AWS Cloudwatch | [awscloudwatch.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/awscloudwatch.py) |
+| AWS Billing | [awsbilling](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.awsbilling.md) | AWS Billing metrics retrieved from Billing Reports | [awsbilling.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/awsbilling.py) |
 | Linux System Checker | [systemchecker](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.system_checker.md) | Creates Wavefront events when files matching a pattern are found (e.g., core dumps) or when files have changed | [system_checker.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/system_checker.py) |
 
 ## Installation
@@ -32,7 +32,7 @@ Running a command via the command line is the simplest method.  It allows you to
 | `COMMAND` | N/A | Execute the given command (see `Current Integrations` section above for names available). |
 | `--config` | `FILE` | Provide the configuration file to the `COMMAND`.  The default path and file is set by each command. |
 
-Additional options available in daemon mode (i.e., using --daemon option):
+Additional options available in daemon mode (i.e., when using --daemon option):
 
 | Argument | Option       | Description |
 | -------- | ------------ | ----------- |
@@ -69,12 +69,13 @@ api_base=https://INSTANCE.wavefront.com
 ```
 
 ## <a name="configfile">Run Method 2: Configuration File</a>
-The configuration file execution mode allows you to run one or more commands (either simultaneously or separately).  In this mode, the `wf` script has the same command line options as the [command line mode](#cmdline).  Options specified on the command line take precedence over those in the configuration file.  One additional argument is the configuration file path:
+The configuration file execution mode allows you to run one or more commands (either simultaneously or separately).  In this mode, the `wf` script has the same command line options as the [command line mode](#cmdline).  Options specified on the command line take precedence over those in the configuration file.  One additional required argument is the configuration file path:
 
 | Argument | Option | Description |
 | -------- | ------ | ----------- |
 | `-c` | `FILE` | The configuration file to describe the command(s) to execute.  This is the option that puts the script into "configuration file mode". See below for the supported options in the configuration file. |
 
+`-c FILE` option *must* be supplied on the command line to indicate to `wf` that it should determine which command(s) to run from the configuration file `FILE`.
 
 ### Configuration File Specification
 This section outlines the specification of the configuration file that the `wf` script supports when loading and executing commands from a file rather than the command line.
@@ -85,7 +86,7 @@ This section outlines the specification of the configuration file that the `wf` 
 | daemon | N | false | Run in the background or foreground.  The command line option will override this value. |
 | out | N | ./wavefront.out | The file to put the STDOUT and STDERR in.  The command line option will override this value.  NOTE: This is only valid when in daemon mode |
 | pid | N | ./wavefront.pid | The location of the PID file.  The command line option will override this value.  NOTE: This is only valid when in daemon mode |
-| threads | Y | None | The comma-separated list of commands to run in separate threads.  The name provided here can be anything as it is just a placeholder for the section name where the configuration of each command resides |
+| threads | Y | None | The comma-separated list of commands to run in separate threads.  The name provided here can be anything as it is just a placeholder for the section name where the configuration of each command resides.  Each name listed here requires an additional section in the configuration file labeled `thread-[thread name]`. |
 
 #### Section: thread-[thread name]
 There should be one section per name listed in the `threads` key in the `global` section.

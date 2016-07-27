@@ -37,8 +37,6 @@ class AwsBaseMetricsConfiguration(Configuration):
         self.writer_port = int(self.get('writer', 'port', '2878'))
         self.is_dry_run = self.getboolean('writer', 'dry_run', True)
 
-        self.delay = int(self.get('options', 'delay', 300))
-
         self.aws_access_key_id = self.get('aws', 'access_key_id', None)
         self.aws_secret_access_key = self.get('aws', 'secret_access_key', None)
         self.regions = self.getlist('aws', 'regions', None, None, ',', True)
