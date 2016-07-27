@@ -3,7 +3,7 @@ This file contains steps necessary to add a new command to the Wavefront Collect
 
 # Steps
 ## Step 1: Create Python File
-Create a new class for your command in a new file.  The file name should be [COMMAND NAME].py and saved in the `wavefront` subdirectory.
+Create a new class for your command in a new file.  The file name should be `[COMMAND NAME].py` and saved in the `wavefront` subdirectory.
 
 The class should derive from `command.Command` and implement the following functions:
 
