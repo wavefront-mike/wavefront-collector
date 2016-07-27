@@ -133,4 +133,6 @@ args=--config,awscloudwatch.conf
 delay=90
 ```
 
+## Additional Details
+- Create a new command by following these [instructions](docs/README.create_new_integration_command.md)
 
