@@ -29,16 +29,12 @@ password: _hidden_
 ```
 > python setup.py check -rs
 ```
-
 2. Update the version number in setup.py
-
 3. Build and upload latest
 ```
 > python setup.py clean build sdist upload -r pypi
 ```
-
 4. Check the PyPi page 
 ```
 https://pypi.python.org/pypi?:action=display&name=wavefront_collector&version=NEW_VERSION_HERE
 ```
-
