@@ -77,7 +77,7 @@ def parse_args():
         try:
             module = importlib.import_module(details[0])
         except:
-            print('failed loading %s: %s' % (command_name, str(sys.exc_info())))
+            #print('failed loading %s: %s' % (command_name, str(sys.exc_info())))
             continue
 
         class_name = details[1]
@@ -97,7 +97,7 @@ def parse_args():
                               'should be redirected when running --daemon'))
     parser.add_argument('--pid', default='./wavefront.pid',
                         help='The path to the PID file when running --daemon')
-    parser.add_argument('--delay', default='60', type=float,
+    parser.add_argument('--delay', default='0', type=float,
                         help=('The number of seconds to delay between each '
                               'execution when running --daemon'))
 

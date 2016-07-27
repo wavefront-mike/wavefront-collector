@@ -60,7 +60,7 @@ class Command(object):
         Execute this command with the given arguments.
 
         Arguments:
-        args - the command line arguments
+        arg - the argparse parser object returned from parser.parse_args()
         """
 
         self._parse_args(args)
