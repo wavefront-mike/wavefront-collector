@@ -13,6 +13,7 @@ import logging
 import logging.config
 import sys
 import threading
+import traceback
 
 import argparse
 import daemon
@@ -23,9 +24,9 @@ from wavefront import utils
 # List of available commands to run.  This is currently hard-coded, but later
 # could (and should) be auto-generated from the commands installed.
 INSTALLED_COMMANDS = {
-    'newrelic': (
-        'wavefront.newrelic',
-        'NewRelicMetricRetrieverCommand'
+    'appdynamics': (
+        'wavefront.appdynamics',
+        'AppDMetricRetrieverCommand'
         ),
     'awsbilling': (
         'wavefront.awsbilling',
@@ -34,6 +35,10 @@ INSTALLED_COMMANDS = {
     'awscloudwatch': (
         'wavefront.awscloudwatch',
         'AwsCloudwatchMetricsCommand'
+        ),
+    'newrelic': (
+        'wavefront.newrelic',
+        'NewRelicMetricRetrieverCommand'
         ),
     'systemchecker': (
         'wavefront.system_checker',
@@ -77,7 +82,8 @@ def parse_args():
         try:
             module = importlib.import_module(details[0])
         except:
-            #print('failed loading %s: %s' % (command_name, str(sys.exc_info())))
+            print('failed loading %s: %s' % (command_name, str(sys.exc_info())))
+            traceback.print_exc()
             continue
 
         class_name = details[1]

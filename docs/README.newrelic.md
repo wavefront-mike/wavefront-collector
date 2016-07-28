@@ -1,12 +1,12 @@
 ### Overview
-This command supports pulling metrics from New Relic at least every minute.  Application summary data can be polled every 30s, but is not guaranteed to be updated that often.
+The `newrelic` command supports pulling metrics from New Relic at least every minute.  Application summary data can be polled every 30s, but is not guaranteed to be updated that often.
 
 #### Usage
-1. Extract the source files to a new directory
+1. Install the Wavefront Collector
 2. Extract the `newrelic-sample-configuration` files to same directory.
-3. Open `summary.conf` and `details.conf` and set the `api.key` and `filter.application_ids` configuration items.  When complete, save wavefront.conf
+3. Open `newrelic-summary.conf` and `newrelic-details.conf` and set the `api.key` and `filter.application_ids` configuration items.  When complete, save wavefront.conf
 4. Run the script:
- ```./wavefront.py -c wavefront.conf```
+ ```wf -c wavefront-collector.conf```
 
 #### New Relic API
 * [API Documentation](https://docs.newrelic.com/docs/apis/rest-api-v2)

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """
-This script is intended to be run either manually from the command line or
-via cron.  It pulls metrics from New Relic.  See the README for
+This script pulls metrics from New Relic.  See the README for
 more details on configuration.
 """
 
@@ -27,7 +26,7 @@ from wavefront.newrelic_common import NewRelicCommand
 DEFAULT_MAX_METRIC_NAME_COUNT = 25
 
 # default location for the configuration file.
-DEFAULT_CONFIG_FILE_PATH = '/opt/wavefront/etc/newrelic.conf'
+DEFAULT_CONFIG_FILE_PATH = '/opt/wavefront/etc/wavefront-collector-newrelic.conf'
 
 #pylint: disable=too-many-instance-attributes
 class NewRelicPluginConfiguration(Configuration):
