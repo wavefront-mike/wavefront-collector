@@ -72,19 +72,19 @@ This configuration file should contain a JSON dictionary stored at the top level
 The default configuration is provided [here](https://github.com/wavefront-mike/wavefront-collector/tree/master/data/awscloudwatch-sample-configuration/aws.json.conf).
 
 Each key in the "metrics" object is a regular expression and the value is an object with the following keys:
-    * stats
+   * stats
         a list of statistics to pull down with the GetMetricStatistics() call.  Valid values are any of : 'Average', 'Maximum', 'Minimum', "SampleCount', 'Sum'
-    * source_names
+   * source_names
         an array of :
           - Point tag name
           - Dimension name
           - String literal (must begin with an '=')
         The first name that contains a value is returned as the source name.
-    * dimensions_as_tags
+   * dimensions_as_tags
         Comma-separated list of dimension names to copy over as point tags
-    * namespace
+   * namespace
         The AWS namespace (AWS/EC2, etc.)
-    * priority
+   * priority
         A numeric value indicating the priority of this configuration.  This is only used if more than one configuration matches the metric name.
  The key to the dictionary is a regular expression that should match a:
      `<namespace>.<metric_name>` (lower case with period escaped with a backslash)
