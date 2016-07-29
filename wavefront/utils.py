@@ -236,6 +236,7 @@ def sanitize_name(_name, replace_map=None):
         replace_map = [
             {'*': 'all'},
             {'.': '_'},
+            {'|': '.'},
             {'//': '.'},
             {'/': '.'}
         ]

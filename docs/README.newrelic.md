@@ -3,9 +3,9 @@ The `newrelic` command supports pulling metrics from New Relic at least every mi
 
 #### Usage
 1. Install the Wavefront Collector
-2. Extract the `newrelic-sample-configuration` files to same directory.
+2. Copy the `newrelic-sample-configuration` files to same directory.
 3. Open `newrelic-summary.conf` and `newrelic-details.conf` and set the `api.key` and `filter.application_ids` configuration items.  When complete, save wavefront.conf
-4. Run the script:
+4. Run the Wavefront Collector:
  ```wf -c wavefront-collector.conf```
 
 #### New Relic API

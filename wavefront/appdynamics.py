@@ -43,16 +43,16 @@ class AppDPluginConfiguration(Configuration):
         self.api_debug = self.getboolean('api', 'debug', False)
 
         self.fields = self.getlist('filter', 'names', [])
-        self.fields_regex = self.getlist('filter', 'regex', [])
-        self.fields_regex_compiled = []
-        for regex in self.fields_regex:
-            self.fields_regex_compiled.append(re.compile(regex))
+        self.fields_whitelist_regex = self.getlist('filter', 'whitelist_regex', [])
+        self.fields_whitelist_regex_compiled = []
+        for regex in self.fields_whitelist_regex:
+            self.fields_whitelist_regex_compiled.append(re.compile(regex))
         self.fields_blacklist_regex = self.getlist(
             'filter', 'blacklist_regex', [])
         self.fields_blacklist_regex_compiled = []
         for regex in self.fields_blacklist_regex:
             self.fields_blacklist_regex_compiled.append(re.compile(regex))
-        self.additional_fields = self.getlist('filter', 'additional_fields', [])
+
         self.application_ids = self.getlist('filter', 'application_ids', [])
         self.start_time = self.get('filter', 'start_time', None)
         self.end_time = self.get('filter', 'end_time', None)
@@ -141,8 +141,8 @@ class AppDMetricRetrieverCommand(command.Command):
 
     #pylint: disable=too-many-arguments
     #pylint: disable=bare-except
-    def send_metric(self, writer, name, value, host, timestamp, tags=None,
-                    value_translator=None, logger=None):
+    def send_metric(self, name, value, host, timestamp, tags=None,
+                    value_translator=None):
         """
         Sends the metric to writer.
 
@@ -170,14 +170,14 @@ class AppDMetricRetrieverCommand(command.Command):
         attempts = 0
         while attempts < 5 and not utils.CANCEL_WORKERS_EVENT.is_set():
             try:
-                writer.transmit_metric(self.config.namespace + '.' +
-                                       utils.sanitize_name(name),
-                                       value, int(timestamp), host, tags)
+                self.proxy.transmit_metric(self.config.namespace + '.' +
+                                           utils.sanitize_name(name),
+                                           value, int(timestamp), host, tags)
                 break
             except:
                 attempts = attempts + 1
-                logger.warning('Failed to transmit metric %s: %s',
-                               name, str(sys.exc_info()))
+                self.logger.warning('Failed to transmit metric %s: %s',
+                                    name, str(sys.exc_info()))
                 if not utils.CANCEL_WORKERS_EVENT.is_set():
                     time.sleep(1)
 
@@ -260,7 +260,8 @@ class AppDMetricRetrieverCommand(command.Command):
 
             # get a list of metrics available
             # TODO: cache this like New Relic plugin
-            metric_tree = self.appd_client.get_metric_tree(app.id, None, True)
+            self.logger.info('[%s] Getting metric tree', app.name)
+            paths = self.get_metric_paths(app)
 
             # if the time is more than 10 minutes, AppD will make sample size
             # larger than a minute.  so, we'll grab the data in chunks
@@ -277,16 +278,7 @@ class AppDMetricRetrieverCommand(command.Command):
                         curr_diff.total_seconds() < 60):
                     curr_end = curr_start + datetime.timedelta(minutes=10)
 
-                for node in metric_tree:
-                    if utils.CANCEL_WORKERS_EVENT.is_set():
-                        break
-                    print str(node)
-                    metrics = self.appd_client.get_metrics(
-                        node.path, app.id, 'BETWEEN_TIMES', None, curr_start,
-                        curr_end, False)
-
-                    for metric in metrics:
-                        print str(metric)
+                self._process_metrics(paths, app, curr_start, curr_end)
 
                 # save "last run time" and update curr_* variables
                 self.config.set_last_run_time(curr_end)
@@ -296,3 +288,82 @@ class AppDMetricRetrieverCommand(command.Command):
                 if (curr_diff.total_seconds() > 600 and
                         not utils.CANCEL_WORKERS_EVENT.is_set()):
                     time.sleep(30)
+
+    def get_metric_paths(self, app):
+        """
+        Calls the get_metric_tree() api for the given app and returns
+        all paths that are not in the black list (or are in black but included
+        in white list)
+        Arguments:
+        app - the application object
+        See:
+        _get_metric_paths()
+        """
+        metric_tree = self.appd_client.get_metric_tree(app.id, None, True)
+        paths = []
+        self._get_metric_paths(paths, app, metric_tree)
+        return paths
+
+    def _get_metric_paths(self, _rtn_paths, app, metric_tree):
+        """
+        Gets a list of paths to retrieve from get_metrics()
+        Arguments:
+        _rtn_paths: out argument to return the list of paths (for recursion)
+        app: the application object
+        metric_tree: the response from get_metric_tree()
+        """
+
+        for node in metric_tree:
+            if utils.CANCEL_WORKERS_EVENT.is_set():
+                break
+
+            if node.type == 'folder':
+                self._get_metric_paths(_rtn_paths, app, node._children)
+                continue
+
+            keep = True
+
+            # black list ...
+            for pattern in self.config.fields_blacklist_regex_compiled:
+                keep = not pattern.match(node.path)
+
+            # white list ...
+            if not keep:
+                for pattern in self.config.fields_whitelist_regex_compiled:
+                    keep = pattern.match(node.path)
+
+            if keep:
+                _rtn_paths.append(node.path)
+#            else:
+#                print 'Skipping ' + node.path
+
+    def _process_metrics(self, paths, app, start, end):
+        """
+        Processes metrics returned from a get_metrics() api call.
+        Arguments:
+        paths - list of paths returned from get_metric_paths()
+        app - the application object
+        start - the start datetime object
+        end - the end datetime object
+        """
+
+        for path in paths:
+            if utils.CANCEL_WORKERS_EVENT.is_set():
+                break
+            self.logger.info('[%s] Getting \'%s\' metrics for %s - %s',
+                             app.name, path, start, end)
+            metrics = self.appd_client.get_metrics(
+                path, app.id, 'BETWEEN_TIMES', None,
+                long(utils.unix_time_seconds(start) * 1000),
+                long(utils.unix_time_seconds(end) * 1000),
+                False)
+            for metric in metrics:
+                if utils.CANCEL_WORKERS_EVENT.is_set():
+                    break
+                for value in metric.values:
+                    self.send_metric(self.config.namespace + '|' + path,
+                                     value.current,
+                                     'appd', # the source name
+                                     long(value.start_time_ms / 1000),
+                                     None, # tags
+                                     self.config.get_value_to_send)

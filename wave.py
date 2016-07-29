@@ -60,10 +60,10 @@ def parse_args():
                         dest='config')
     parser.add_argument('--daemon', action='store_true', default=False,
                         help='Run in background (default is false)')
-    parser.add_argument('--out', default='./wavefront.out',
+    parser.add_argument('--out',
                         help=('The path to the file where stdout/stderr '
                               'should be redirected when running --daemon'))
-    parser.add_argument('--pid', default='./wavefront.pid',
+    parser.add_argument('--pid',
                         help='The path to the PID file when running --daemon')
 
     args, _ = parser.parse_known_args()
