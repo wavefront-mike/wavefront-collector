@@ -194,34 +194,21 @@ class NewRelicMetricRetrieverCommand(NewRelicCommand):
 
         return "Pull metrics from New Relic"
 
-    #pylint: disable=no-self-use
-    def add_arguments(self, parser):
-        """
-        Adds arguments for this command to the parser.
-
-        Arguments:
-        parser - the argparse parser created using .add_parser()
-        """
-
-        parser.add_argument('--config',
-                            dest='config_file_path',
-                            default=DEFAULT_CONFIG_FILE_PATH,
-                            help='Path to configuration file')
-
-    def _parse_args(self, arg):
+    def _initialize(self, args):
         """
         Parses the arguments passed into this command.
 
         Arguments:
-        arg - the argparse parser object returned from parser.parse_args()
+        arg - the argparse parser object returned from argparser
         """
 
-        self.config = NewRelicPluginConfiguration(arg.config_file_path)
+        self.config = NewRelicPluginConfiguration(args.config_file_path)
         self.config.validate()
         try:
-            logging.config.fileConfig(arg.config_file_path)
+            logging.config.fileConfig(args.config_file_path)
         except ConfigParser.NoSectionError:
             pass
+        self.logger = logging.getLogger()
 
     def get_metric_names_for_path(self, path, names_filter):
         """

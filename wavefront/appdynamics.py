@@ -139,9 +139,6 @@ class AppDMetricRetrieverCommand(command.Command):
         self.config = None
         self.proxy = None
 
-    def _init_logging(self):
-        self.logger = logging.getLogger()
-
     #pylint: disable=too-many-arguments
     #pylint: disable=bare-except
     def send_metric(self, writer, name, value, host, timestamp, tags=None,
@@ -192,26 +189,12 @@ class AppDMetricRetrieverCommand(command.Command):
 
         return "Pull metrics from AppDynamics"
 
-    #pylint: disable=no-self-use
-    def add_arguments(self, parser):
-        """
-        Adds arguments for this command to the parser.
-
-        Arguments:
-        parser - the argparse parser created using .add_parser()
-        """
-
-        parser.add_argument('--config',
-                            dest='config_file_path',
-                            default=DEFAULT_CONFIG_FILE_PATH,
-                            help='Path to configuration file')
-
-    def _parse_args(self, arg):
+    def _initialize(self, arg):
         """
         Parses the arguments passed into this command.
 
         Arguments:
-        arg - the argparse parser object returned from parser.parse_args()
+        arg - the argparse parser object returned from argparser
         """
 
         self.config = AppDPluginConfiguration(arg.config_file_path)
@@ -220,6 +203,7 @@ class AppDMetricRetrieverCommand(command.Command):
             logging.config.fileConfig(arg.config_file_path)
         except ConfigParser.NoSectionError:
             pass
+        self.logger = logging.getLogger()
 
     #pylint: disable=too-many-branches
     def _execute(self):
@@ -268,7 +252,8 @@ class AppDMetricRetrieverCommand(command.Command):
         self.logger.info('Running %s - %s', str(start), str(end))
 
         for app in self.appd_client.get_applications():
-            if app.id not in self.config.application_ids:
+            if str(app.id) not in self.config.application_ids:
+                print 'skipping %s (%s)' % (app.name, str(app.id))
                 continue
             if utils.CANCEL_WORKERS_EVENT.is_set():
                 break
@@ -293,6 +278,9 @@ class AppDMetricRetrieverCommand(command.Command):
                     curr_end = curr_start + datetime.timedelta(minutes=10)
 
                 for node in metric_tree:
+                    if utils.CANCEL_WORKERS_EVENT.is_set():
+                        break
+                    print str(node)
                     metrics = self.appd_client.get_metrics(
                         node.path, app.id, 'BETWEEN_TIMES', None, curr_start,
                         curr_end, False)

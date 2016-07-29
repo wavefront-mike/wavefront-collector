@@ -251,12 +251,12 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
         super(AwsCloudwatchMetricsCommand, self).__init__(**kwargs)
         self.metrics_config = None
 
-    def _parse_args(self, arg):
+    def _initialize(self, arg):
         """
         Parses the arguments passed into this command.
 
         Arguments:
-        arg - the argparse parser object returned from parser.parse_args()
+        arg - the argparse parser object returned from argparser
         """
 
         self.config = AwsMetricsConfiguration(arg.config_file_path)
@@ -265,6 +265,7 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
             logging.config.fileConfig(arg.config_file_path)
         except ConfigParser.NoSectionError:
             pass
+        self.logger = logging.getLogger()
 
     #pylint: disable=no-self-use
     def get_help_text(self):
@@ -273,13 +274,6 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
         """
         return "Pull metrics from AWS CloudWatch and push them into Wavefront"
 
-    def _execute(self):
-        """
-        Execute this command
-        """
-
-        super(AwsCloudwatchMetricsCommand, self)._execute()
-        self._process_cloudwatch()
 
     #pylint: disable=too-many-locals
     #pylint: disable=too-many-branches

@@ -40,9 +40,6 @@ class NewRelicCommand(command.Command):
 
         self.proxy = self.get_writer_from_config(self.config)
 
-    def _init_logging(self):
-        self.logger = logging.getLogger()
-
     @staticmethod
     def get_writer_from_config(config):
         """

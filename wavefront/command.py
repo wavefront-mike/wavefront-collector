@@ -23,24 +23,17 @@ class Command(object):
             fmt = logging.Formatter('%(levelname)s: %(thread)d %(message)s')
             self.logger.root.handlers[0].setFormatter(fmt)
         self.description = kwargs.get('description', 'Wavefront command')
+        self.name = kwargs.get('name', 'wfcollector')
 
-    def _init_logging(self):
+    def _initialize(self, args):
         """
-        Initialize the logger.  Overwrite this to set the log to run from
-        a separate configuration, etc.
-        """
-
-        pass
-
-    def _parse_args(self, args):
-        """
-        Parses the command specific arguments out.
+        Initializes the command
 
         Arguments:
         args - list of arguments
         """
 
-        raise ValueError('command:parse_args() should be implemented '
+        raise ValueError('command:_initiailize() should be implemented '
                          'by subclass')
 
     def add_arguments(self, parser):
@@ -51,8 +44,11 @@ class Command(object):
         parser - the subparser where arguments are added
         """
 
-        raise ValueError('command:parse_args() should be implemented '
-                         'by subclass')
+        default_config = '/opt/wavefront/etc/' + self.name + '.conf'
+        parser.add_argument('--config',
+                            dest='config_file_path',
+                            default=default_config,
+                            help='Path to configuration file')
 
     #pylint: disable=bare-except
     def execute(self, args):
@@ -60,11 +56,10 @@ class Command(object):
         Execute this command with the given arguments.
 
         Arguments:
-        arg - the argparse parser object returned from parser.parse_args()
+        arg - the argparse parser object returned from argparser
         """
 
-        self._parse_args(args)
-        self._init_logging()
+        self._initialize(args)
         while not utils.CANCEL_WORKERS_EVENT.is_set():
             try:
                 self.logger.info('Executing %s ...', self.description)

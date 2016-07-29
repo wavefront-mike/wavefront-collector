@@ -17,7 +17,7 @@ from wavefront.utils import Configuration
 from wavefront import command
 
 # default configuration
-DEFAULT_CONFIG_FILE = '/opt/wavefront/etc/aws-metrics.conf'
+
 
 # The directory where we should look for and store the cache
 # files of instances and their tags.
@@ -64,19 +64,12 @@ class AwsBaseMetricsCommand(command.Command):
                                             self.config.is_dry_run)
         self.proxy.start()
 
-    def _init_logging(self):
-        self.logger = logging.getLogger()
-
-    def add_arguments(self, parser):
+    def _process(self):
         """
-        Adds arguments supported by this command to the argparse parser
-        :param parser: the argparse parser created using .add_parser()
+        Process this aws command (implemented by derived class)
         """
 
-        parser.add_argument('--config',
-                            dest='config_file_path',
-                            default=DEFAULT_CONFIG_FILE,
-                            help='Path to configuration file')
+        pass
 
     def _execute(self):
         """
@@ -85,6 +78,7 @@ class AwsBaseMetricsCommand(command.Command):
 
         self._init_proxy()
         self.account = AwsAccount(self.config, True)
+        self._process()
 
     @staticmethod
     def get_source(source_names, point_tags, dimensions=None):

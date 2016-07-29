@@ -10,9 +10,7 @@ The class should derive from `command.Command` and implement the following funct
 | Function/Property | Required | Description |
 | -------- | -------- | ----------- |
 | description | Yes | Short description of this command.  This is displayed in the log output.  Set in `__init__()` |
-| _init_logging() | No | Initializes the logger to log to a file or somewhere else.  The default behavior is to log to stdout. |
-| _parse_args() | Yes | Parse the command-specific arguments.  This function is given the argparse parser object.  If there are any command-specific command-line arguments, they should be parsed here. |
-| add_arguments() | Yes | Add any command-specific command-line arguments to the argparse parser object here.  These can then be parsed and handled in `_parse_args()` |
+| _initialize() | Yes | Initializes the command object (run once when the command is run and never again - i.e., not every execute cycle) |
 | _execute() | Yes | Implement the command's processing logic here.  This function is called for each execution. |
 | get_help_text() | Yes | Returns the text to display when showing help text for this command |
 

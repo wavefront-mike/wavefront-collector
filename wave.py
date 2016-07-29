@@ -11,9 +11,9 @@ import ConfigParser
 import importlib
 import logging
 import logging.config
-import sys
+#import sys
 import threading
-import traceback
+#import traceback
 
 import argparse
 import daemon
@@ -82,8 +82,8 @@ def parse_args():
         try:
             module = importlib.import_module(details[0])
         except:
-            print('failed loading %s: %s' % (command_name, str(sys.exc_info())))
-            traceback.print_exc()
+#            print('failed loading %s: %s' % (command_name, str(sys.exc_info())))
+#            traceback.print_exc()
             continue
 
         class_name = details[1]
@@ -249,7 +249,8 @@ def get_command_object(command_name):
         details = INSTALLED_COMMANDS[command_name]
         command_module = importlib.import_module(details[0])
         class_name = details[1]
-        return getattr(command_module, class_name)()
+        return getattr(command_module, class_name)(name=command_name)
+
     else:
         raise ValueError('Command ' + command_name + ' not found')
 

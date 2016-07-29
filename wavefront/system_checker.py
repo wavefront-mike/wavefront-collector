@@ -171,11 +171,6 @@ class SystemCheckerCommand(command.Command):
         self.config = None
         self.description = "System Checker"
 
-    def _init_logging(self):
-        self.logger = logging.getLogger()
-        if self.config.log_requests:
-            httplib.HTTPConnection.debuglevel = 1
-
     #pylint: disable=no-self-use
     def get_help_text(self):
         """
@@ -185,26 +180,12 @@ class SystemCheckerCommand(command.Command):
         return ('System Checker for finding files matching a pattern, '
                 'files that changed, etc.')
 
-    #pylint: disable=no-self-use
-    def add_arguments(self, parser):
-        """
-        Adds arguments for this command to the parser.
-
-        Arguments:
-        parser - the argparse parser created using .add_parser()
-        """
-
-        parser.add_argument('--config',
-                            dest='config_file_path',
-                            default=DEFAULT_CONFIG_FILE_PATH,
-                            help='Path to configuration file')
-
-    def _parse_args(self, arg):
+    def _initialize(self, arg):
         """
         Parses the arguments passed into this command.
 
         Arguments:
-        arg - the argparse parser object returned from parser.parse_args()
+        arg - the argparse parser object returned from argparser
 
         Raises:
         ValueError - when config file is not provided
@@ -219,6 +200,11 @@ class SystemCheckerCommand(command.Command):
             logging.config.fileConfig(arg.config_file_path)
         except ConfigParser.NoSectionError:
             pass
+
+        # logger
+        self.logger = logging.getLogger()
+        if self.config.log_requests:
+            httplib.HTTPConnection.debuglevel = 1
 
         # configure wavefront api
         wavefront_client.configuration.api_key['X-AUTH-TOKEN'] = \
