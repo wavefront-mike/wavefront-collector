@@ -32,6 +32,9 @@ class MetricsWriter(object):
         line = self._generate_line(name, value, timestamp, source, point_tags)
         if self.is_dry_run:
             thread_id = hex(threading.current_thread().ident)
+            # command line mode you want to see this in stdout
+            # in daemon mode you want to see this in a log
+            # TODO: revisit and write to log when daemonized?
             print '[{} {}:{}] {}'.format(thread_id, self.host, self.port, line)
 
         else:

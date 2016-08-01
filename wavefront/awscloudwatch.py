@@ -101,7 +101,7 @@ class AwsCloudwatchConfiguration(object):
             self.section_name, 'start_time', None, default_section_name)
         self.end_time = self.config.getdate(
             self.section_name, 'end_time', None, default_section_name)
-        self.last_run_time = self.config.getdate(
+        self.last_run_time = self.config.output.getdate(
             self.section_name, 'last_run_time', None, default_section_name)
         self.update_start_end_times()
 
@@ -140,9 +140,9 @@ class AwsCloudwatchConfiguration(object):
         if not run_time:
             run_time = utcnow
 
-        self.config.set(
+        self.config.output.set(
             self.section_name, 'last_run_time', run_time.isoformat())
-        self.config.save()
+        self.config.output.save()
         self.last_run_time = run_time
 
     def validate(self):
@@ -162,6 +162,7 @@ class AwsCloudwatchConfiguration(object):
 
         if self.metrics_config:
             return
+
         with open(self.metric_config_path, 'r') as conffd:
             config = json.load(conffd)
 
@@ -319,8 +320,9 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
 
             dimensions = metric['Dimensions']
             for dim in dimensions:
-                if ('dimensions_as_tags' in config and
-                        dim['Name'] in config['dimensions_as_tags']):
+                if (('dimensions_as_tags' in config and
+                     dim['Name'] in config['dimensions_as_tags']) or
+                        'dimensions_as_tags' not in config):
                     point_tags[dim['Name']] = dim['Value']
                 if sub_account.instances and dim['Name'] == 'InstanceId':
                     instance_id = dim['Value']
@@ -387,7 +389,7 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
                 else:
                     curr_end = end
 
-    def _process_cloudwatch(self):
+    def _process(self):
 
         # process each subaccount/region in parallel
         region_call_details = []
@@ -415,13 +417,13 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
 
         cloudwatch_config = self.config.get_region_config(region)
         cloudwatch_config.update_start_end_times()
+        cloudwatch_config.load_metric_config()
         self.logger.info('Loading metrics %s - %s (Region: %s, Namespace: %s)',
                          str(cloudwatch_config.start_time),
                          str(cloudwatch_config.end_time),
                          region,
                          ', '.join(cloudwatch_config.namespaces))
 
-        cloudwatch_config.load_metric_config()
         function_pointers = []
         session = sub_account.get_session(region, False)
         cloudwatch = session.client('cloudwatch')

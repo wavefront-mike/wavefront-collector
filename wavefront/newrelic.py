@@ -75,6 +75,12 @@ class NewRelicPluginConfiguration(Configuration):
             'options', 'include_server_summary', True)
         self.include_servers = self.getboolean(
             'options', 'include_server_details', False)
+        self.output_directory = self.config.get(
+            'options', 'output_directory', '.')
+        self.output = Configuration(
+            config_file_path=self.output_directory,
+            create_if_not_exist=True)
+
         self.include_hosts = self.getboolean('options', 'include_hosts', True)
         self.min_delay = int(self.get('options', 'min_delay', 60))
         self.wf_api_key = self.get('wavefront_api', 'key', '')
@@ -125,8 +131,8 @@ class NewRelicPluginConfiguration(Configuration):
         if not run_time:
             run_time = (datetime.datetime.utcnow()
                         .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
-        self.config.set('options', 'last_run_time', run_time.isoformat())
-        self.save()
+        self.output.set('options', 'last_run_time', run_time.isoformat())
+        self.output.save()
 
     def get_value_to_send(self, name, value):
         """

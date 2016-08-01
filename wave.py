@@ -87,7 +87,7 @@ def parse_args():
             continue
 
         class_name = details[1]
-        command = getattr(module, class_name)()
+        command = getattr(module, class_name)(name=command_name)
         subparser = subparsers.add_parser(command_name,
                                           help=command.get_help_text())
         command.add_arguments(subparser)

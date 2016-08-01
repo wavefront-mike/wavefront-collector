@@ -89,7 +89,7 @@ class AwsBillingDetailThreadConfiguration(object):
         self.instance_id_columns = self.config.getlist(
             section_name, 'instance_id_column_names', [])
         self.delay = int(self.config.get(section_name, 'delay', 3600))
-        self.last_run_time = self.config.getdate(
+        self.last_run_time = self.config.output.getdate(
             section_name, 'last_run_time', None)
         self.record_id_column = self.config.get(
             section_name, 'record_id_column_name', None)
@@ -141,9 +141,9 @@ class AwsBillingDetailThreadConfiguration(object):
         if not run_time:
             run_time = utcnow
         self.last_run_time = run_time
-        self.config.set(
+        self.config.output.set(
             self.section_name, 'last_run_time', run_time.isoformat())
-        self.config.save()
+        self.config.output.save()
 
     def get_last_record_id(self, curr_month):
         """
@@ -163,9 +163,9 @@ class AwsBillingDetailThreadConfiguration(object):
         if not record_id:
             return
 
-        self.config.set(
+        self.config.output.set(
             self.section_name, 'last_record_id_' + curr_month, record_id)
-        self.config.save()
+        self.config.output.save()
 
 class AwsBillingMetricsCommand(AwsBaseMetricsCommand):
     """

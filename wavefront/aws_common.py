@@ -5,15 +5,12 @@ and the AWS Billing script commands.
 
 import datetime
 import json
-import logging
-import numbers
 import os
 import os.path
 
 import boto3
 
 from wavefront.metrics_writer import WavefrontMetricsWriter
-from wavefront.utils import Configuration
 from wavefront import command
 
 # default configuration
@@ -24,7 +21,7 @@ from wavefront import command
 CACHE_DIR = '/tmp'
 
 #pylint: disable=too-many-instance-attributes
-class AwsBaseMetricsConfiguration(Configuration):
+class AwsBaseMetricsConfiguration(command.CommandConfiguration):
     """
     Common Configuration file for this command
     """
@@ -42,6 +39,8 @@ class AwsBaseMetricsConfiguration(Configuration):
         self.regions = self.getlist('aws', 'regions', None, None, ',', True)
         self.sub_accounts = self.getlist('aws', 'sub_accounts', [])
 
+        self._setup_output(self)
+
 class AwsBaseMetricsCommand(command.Command):
     """
     Abstract base class for both AWS cloudwatch metrics and AWS billing metrics
@@ -50,6 +49,7 @@ class AwsBaseMetricsCommand(command.Command):
 
     def __init__(self, **kwargs):
         super(AwsBaseMetricsCommand, self).__init__(**kwargs)
+
         self.account = None
         self.config = None
         self.proxy = None
@@ -94,12 +94,6 @@ class AwsBaseMetricsCommand(command.Command):
         """
 
         for name in source_names:
-            if dimensions and isinstance(name, numbers.Number):
-                if len(dimensions) < int(name):
-                    return (dimensions[name], name)
-                else:
-                    continue
-
             if name[0:1] == '=':
                 return (name[1:], None)
 
@@ -161,6 +155,9 @@ class AwsAccount(object):
         """
 
         if role_arn:
+            if not external_id:
+                raise ValueError('External ID is required for region ' +
+                                 region + ' and role ARN ' + role_arn)
             cache_key = ':'.join([region, role_arn, external_id])
         else:
             cache_key = region
@@ -205,9 +202,6 @@ class AwsSubAccountConfiguration(object):
         self.enabled = self.config.getboolean(section_name, 'enabled', False)
         self.role_arn = self.config.get(section_name, 'role_arn', None)
         self.role_external_id = self.config.get(section_name, 'external_id', None)
-        self.access_key_id = self.config.get(section_name, 'access_key_id', None)
-        self.secret_access_key = self.config.get(
-            section_name, 'secret_access_key', None)
 
 class AwsSubAccount(object):
     """

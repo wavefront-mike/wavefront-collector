@@ -2,9 +2,13 @@
 Command base class and utility functions
 """
 
+import datetime
 import gc
 import logging
+import os.path
 import time
+
+import dateutil.tz
 
 from wavefront import utils
 
@@ -17,6 +21,7 @@ class Command(object):
 
     def __init__(self, **kwargs):
         super(Command, self).__init__()
+
         self.verbose = False
         self.logger = logging.getLogger()
         if len(self.logger.root.handlers) > 0:
@@ -92,13 +97,59 @@ class Command(object):
 
         return ""
 
-    def output_verbose(self, msg):
+# pylint: disable=too-few-public-methods
+class CommandConfiguration(utils.Configuration):
+    """
+    Base class for configurations of a command
+    """
+
+    def __init__(self, config_file_path, create_if_not_exist=False):
+        super(CommandConfiguration, self).__init__(
+            config_file_path=config_file_path,
+            create_if_not_exist=create_if_not_exist)
+
+        self.output_directory = None
+        self.output = None
+
+    def _setup_output(self, config):
         """
-        Very simple function to output to stdout if verbose flag is set.
+        Sets up the output directory and output file
+        """
+
+        self.output_directory = config.get('options', 'output_directory', None)
+
+        if self.output_directory:
+            if not os.path.exists(self.output_directory):
+                os.makedirs(self.output_directory)
+
+            output_file = (self.output_directory + '/' +
+                           os.path.basename(self.config_file_path) + '.save')
+        else:
+            output_file = self.config_file_path + '.save'
+
+        self.output = utils.Configuration(
+            config_file_path=output_file,
+            create_if_not_exist=True)
+
+    def get_last_run_time(self):
+        """
+        Gets the last run time as a string
+        """
+        return self.output.get('options', 'last_run_time', None)
+
+    def set_last_run_time(self, run_time):
+        """
+        Sets the last run time to the run_time argument.
 
         Arguments:
-        msg - the message to output
+        run_time - the time when this script last executed successfully (end)
         """
 
-        if self.verbose:
-            print msg
+        if utils.CANCEL_WORKERS_EVENT.is_set():
+            return
+
+        if not run_time:
+            run_time = (datetime.datetime.utcnow()
+                        .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
+        self.output.set('options', 'last_run_time', run_time.isoformat())
+        self.output.save()

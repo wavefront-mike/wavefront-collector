@@ -18,15 +18,14 @@ import dateutil.parser
 
 from appd.request import AppDynamicsClient
 from wavefront import command
-from wavefront.metrics_writer import WavefrontMetricsWriter
-from wavefront.utils import Configuration
 from wavefront import utils
+from wavefront.metrics_writer import WavefrontMetricsWriter
 
 # default location for the configuration file.
 DEFAULT_CONFIG_FILE_PATH = '/opt/wavefront/etc/wavefront-collector-appd.conf'
 
 #pylint: disable=too-many-instance-attributes
-class AppDPluginConfiguration(Configuration):
+class AppDPluginConfiguration(command.CommandConfiguration):
     """
     Stores the configuration for this plugin
     """
@@ -57,39 +56,23 @@ class AppDPluginConfiguration(Configuration):
         self.start_time = self.get('filter', 'start_time', None)
         self.end_time = self.get('filter', 'end_time', None)
 
-        self.last_run_time = self.get('options', 'last_run_time', None)
-        if self.start_time and self.end_time and self.last_run_time:
-            if self.last_run_time > self.start_time:
-                self.start_time = self.last_run_time
-        elif self.last_run_time:
-            self.start_time = self.last_run_time
-
         self.namespace = self.get('options', 'namespace', 'appd')
         self.min_delay = int(self.get('options', 'min_delay', 60))
         self.skip_null_values = self.getboolean(
             'options', 'skip_null_values', False)
         self.default_null_value = self.get('options', 'default_null_value', 0)
 
+        self._setup_output(self)
+        self.last_run_time = self.get_last_run_time()
+        if self.start_time and self.end_time and self.last_run_time:
+            if self.last_run_time > self.start_time:
+                self.start_time = self.last_run_time
+        elif self.last_run_time:
+            self.start_time = self.last_run_time
+
         self.writer_host = self.get('writer', 'host', '127.0.0.1')
         self.writer_port = int(self.get('writer', 'port', '2878'))
         self.is_dry_run = self.getboolean('writer', 'dry_run', True)
-
-    def set_last_run_time(self, run_time):
-        """
-        Sets the last run time to the run_time argument.
-
-        Arguments:
-        run_time - the time when this script last executed successfully (end)
-        """
-
-        if utils.CANCEL_WORKERS_EVENT.is_set():
-            return
-
-        if not run_time:
-            run_time = (datetime.datetime.utcnow()
-                        .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
-        self.config.set('options', 'last_run_time', run_time.isoformat())
-        self.save()
 
     def get_value_to_send(self, name, value):
         """
@@ -321,9 +304,9 @@ class AppDMetricRetrieverCommand(command.Command):
                 self._get_metric_paths(_rtn_paths, app, node._children)
                 continue
 
-            keep = True
 
             # black list ...
+            keep = True
             for pattern in self.config.fields_blacklist_regex_compiled:
                 keep = not pattern.match(node.path)
 
@@ -334,8 +317,6 @@ class AppDMetricRetrieverCommand(command.Command):
 
             if keep:
                 _rtn_paths.append(node.path)
-#            else:
-#                print 'Skipping ' + node.path
 
     def _process_metrics(self, paths, app, start, end):
         """
