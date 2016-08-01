@@ -127,6 +127,15 @@ class CommandConfiguration(utils.Configuration):
         else:
             output_file = self.config_file_path + '.save'
 
+        # try to touch the file to see if we have permission
+        try:
+            with open(output_file, 'a'):
+                os.utime(output_file, None)
+        except IOError:
+            print "Unable to write to output file " + output_file
+            output_file = ('/tmp/' + os.path.basename(self.config_file_path) +
+                           '.save')
+
         self.output = utils.Configuration(
             config_file_path=output_file,
             create_if_not_exist=True)

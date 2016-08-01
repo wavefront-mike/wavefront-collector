@@ -141,7 +141,8 @@ class AwsAccount(object):
             arn = role_arn
 
         else:
-            iam_client = self.get_session('us-east-1', None, None).client('iam')
+            iam_client = self.get_session(
+                self.regions[0], None, None).client('iam')
             arn = iam_client.get_user()['User']['Arn']
 
         return arn.split(':')[4]
@@ -182,7 +183,7 @@ class AwsAccount(object):
                     region_name=region)
 
             else:
-                self.sessions[cache_key] = boto3.Session(
+                self.sessions[cache_key] = boto3.session.Session(
                     region_name=region,
                     aws_access_key_id=access_key_id,
                     aws_secret_access_key=secret_access_key)

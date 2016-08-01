@@ -16,6 +16,7 @@ import threading
 #import traceback
 
 import argparse
+import boto3
 import daemon
 import daemon.pidfile
 from wavefront import utils
@@ -166,6 +167,15 @@ def main():
     Main function
     """
 
+    # this is a hack to workaround a bug in boto3
+    # see this bug report:
+    # https://github.com/boto/botocore/issues/577
+    boto3.setup_default_session()
+    boto3.DEFAULT_SESSION._session.get_component('data_loader')
+    boto3.DEFAULT_SESSION._session.get_component('event_emitter')
+    boto3.DEFAULT_SESSION._session.get_component('endpoint_resolver')
+    boto3.DEFAULT_SESSION._session.get_component('credential_provider')
+
     logging.basicConfig(format='%(levelname)s: %(message)s',
                         level=logging.INFO)
     args = parse_args()
@@ -252,7 +262,7 @@ def get_command_object(command_name):
         return getattr(command_module, class_name)(name=command_name)
 
     else:
-        raise ValueError('Command ' + command_name + ' not found')
+        raise ValueError('Command ' + str(command_name) + ' not found')
 
 if __name__ == '__main__':
     main()
