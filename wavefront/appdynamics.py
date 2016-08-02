@@ -53,8 +53,8 @@ class AppDPluginConfiguration(command.CommandConfiguration):
             self.fields_blacklist_regex_compiled.append(re.compile(regex))
 
         self.application_ids = self.getlist('filter', 'application_ids', [])
-        self.start_time = self.get('filter', 'start_time', None)
-        self.end_time = self.get('filter', 'end_time', None)
+        self.start_time = self.getdate('filter', 'start_time', None)
+        self.end_time = self.getdate('filter', 'end_time', None)
 
         self.namespace = self.get('options', 'namespace', 'appd')
         self.min_delay = int(self.get('options', 'min_delay', 60))
@@ -209,15 +209,13 @@ class AppDMetricRetrieverCommand(command.Command):
 
         # construct start time for when to get metrics starting from
         if self.config.start_time:
-            start = (dateutil.parser.parse(self.config.start_time)
-                     .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
+            start = self.config.start_time
         else:
             start = ((datetime.datetime.utcnow() -
                       datetime.timedelta(seconds=60.0))
                      .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
         if self.config.end_time:
-            end = (dateutil.parser.parse(self.config.end_time)
-                   .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
+            end = self.config.end_time
         else:
             end = None
 

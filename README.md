@@ -11,6 +11,12 @@ The Wavefront collector facilitates external integrations with Wavefront. This a
 | Linux System Checker | [systemchecker](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.system_checker.md) | Creates Wavefront events when files matching a pattern are found (e.g., core dumps) or when files have changed | [system_checker.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/system_checker.py) |
 
 ## Installation
+
+### Prerequisites
+A couple of Linux development packages are required to run the collector:
+1. libffi-devel
+2. openssl-devel
+
 Install using pip or using the provided setup.py.
 
 ```

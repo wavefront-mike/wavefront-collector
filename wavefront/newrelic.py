@@ -58,8 +58,8 @@ class NewRelicPluginConfiguration(command.CommandConfiguration):
             self.fields_blacklist_regex_compiled.append(re.compile(regex))
         self.additional_fields = self.getlist('filter', 'additional_fields', [])
         self.application_ids = self.getlist('filter', 'application_ids', [])
-        self.start_time = self.get('filter', 'start_time', None)
-        self.end_time = self.get('filter', 'end_time', None)
+        self.start_time = self.getdate('filter', 'start_time', None)
+        self.end_time = self.getdate('filter', 'end_time', None)
         last_run_time = self.get_last_run_time()
         if self.start_time and self.end_time and last_run_time:
             if last_run_time > self.start_time:
@@ -403,15 +403,13 @@ class NewRelicMetricRetrieverCommand(NewRelicCommand):
             self.init_proxy()
             # construct start time for when to get metrics starting from
             if self.config.start_time:
-                start = (dateutil.parser.parse(self.config.start_time)
-                         .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
+                start = self.config.start_time
             else:
                 start = ((datetime.datetime.utcnow() -
                           datetime.timedelta(seconds=60.0))
                          .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
             if self.config.end_time:
-                end = (dateutil.parser.parse(self.config.end_time)
-                       .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
+                end = self.config.end_time
             else:
                 end = None
 
