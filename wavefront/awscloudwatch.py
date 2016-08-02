@@ -101,8 +101,6 @@ class AwsCloudwatchConfiguration(object):
             self.section_name, 'start_time', None, default_section_name)
         self.end_time = self.config.getdate(
             self.section_name, 'end_time', None, default_section_name)
-        self.last_run_time = self.config.output.getdate(
-            self.section_name, 'last_run_time', None, default_section_name)
         self.update_start_end_times()
 
         self.namespaces = set()
@@ -116,9 +114,10 @@ class AwsCloudwatchConfiguration(object):
         utcnow = (datetime.datetime.utcnow()
                   .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
         delta = datetime.timedelta(minutes=self.default_delay_minutes)
-        if self.last_run_time:
-            if not self.start_time or self.last_run_time > self.start_time:
-                self.start_time = self.last_run_time - delta
+        last_run_time = self.config.get_last_run_time(self.section_name)
+        if last_run_time:
+            if not self.start_time or last_run_time > self.start_time:
+                self.start_time = last_run_time - delta
                 self.end_time = utcnow
         elif not self.start_time:
             self.start_time = utcnow - delta
@@ -132,18 +131,7 @@ class AwsCloudwatchConfiguration(object):
         run_time - the time when this script last executed successfully (end)
         """
 
-        if utils.CANCEL_WORKERS_EVENT.is_set():
-            return
-
-        utcnow = (datetime.datetime.utcnow()
-                  .replace(microsecond=0, tzinfo=dateutil.tz.tzutc()))
-        if not run_time:
-            run_time = utcnow
-
-        self.config.output.set(
-            self.section_name, 'last_run_time', run_time.isoformat())
-        self.config.output.save()
-        self.last_run_time = run_time
+        self.config.set_last_run_time(run_time, self.section_name)
 
     def validate(self):
         """
@@ -295,7 +283,7 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
         cloudwatch_config = self.config.get_region_config(region)
         start = cloudwatch_config.start_time
         end = cloudwatch_config.end_time
-        session = sub_account.get_session(region, False)
+        session = sub_account.get_session(region)
         cloudwatch = session.client('cloudwatch')
         account_id = sub_account.get_account_id()
 
@@ -425,7 +413,7 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
                          ', '.join(cloudwatch_config.namespaces))
 
         function_pointers = []
-        session = sub_account.get_session(region, False)
+        session = sub_account.get_session(region)
         cloudwatch = session.client('cloudwatch')
         for namespace in cloudwatch_config.namespaces:
             paginator = cloudwatch.get_paginator('list_metrics')
@@ -468,5 +456,7 @@ class AwsCloudwatchMetricsCommand(AwsBaseMetricsCommand):
                                         self.logger)
         if not utils.CANCEL_WORKERS_EVENT.is_set():
             cloudwatch_config.set_last_run_time(cloudwatch_config.end_time)
+            run_time = cloudwatch_config.config.get_last_run_time(
+                cloudwatch_config.section_name)
             self.logger.info('Last run time updated to %s for %s',
-                             str(cloudwatch_config.last_run_time), region)
+                             str(run_time), region)

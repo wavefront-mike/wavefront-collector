@@ -147,48 +147,42 @@ class AwsAccount(object):
 
         return arn.split(':')[4]
 
-    def get_session(self, region, role_arn, external_id, check_cache=True):
+    def get_session(self, region, role_arn, external_id):
         """
         Creates a new session object in the given region
         Arguments:
         region - the region name
-        check_cache - True to check the cache before creating new session
         """
 
         if role_arn:
             if not external_id:
                 raise ValueError('External ID is required for region ' +
                                  region + ' and role ARN ' + role_arn)
-            cache_key = ':'.join([region, role_arn, external_id])
-        else:
-            cache_key = region
 
         access_key_id = self.config.aws_access_key_id
         secret_access_key = self.config.aws_secret_access_key
-        if not check_cache or cache_key not in self.sessions:
-            if role_arn:
-                session = boto3.session.Session()
-                client = session.client(
-                    'sts',
-                    region_name=region,
-                    aws_access_key_id=access_key_id,
-                    aws_secret_access_key=secret_access_key)
-                role = client.assume_role(RoleArn=role_arn,
-                                          ExternalId=external_id,
-                                          RoleSessionName='wavefront_session')
-                self.sessions[cache_key] = boto3.Session(
-                    role['Credentials']['AccessKeyId'],
-                    role['Credentials']['SecretAccessKey'],
-                    role['Credentials']['SessionToken'],
-                    region_name=region)
+        if role_arn:
+            session = boto3.session.Session()
+            client = session.client(
+                'sts',
+                region_name=region,
+                aws_access_key_id=access_key_id,
+                aws_secret_access_key=secret_access_key)
+            role = client.assume_role(RoleArn=role_arn,
+                                      ExternalId=external_id,
+                                      RoleSessionName='wavefront_session')
+            return boto3.Session(
+                role['Credentials']['AccessKeyId'],
+                role['Credentials']['SecretAccessKey'],
+                role['Credentials']['SessionToken'],
+                region_name=region)
 
-            else:
-                self.sessions[cache_key] = boto3.session.Session(
-                    region_name=region,
-                    aws_access_key_id=access_key_id,
-                    aws_secret_access_key=secret_access_key)
+        else:
+            return boto3.session.Session(
+                region_name=region,
+                aws_access_key_id=access_key_id,
+                aws_secret_access_key=secret_access_key)
 
-        return self.sessions[cache_key]
 
 #pylint: disable=too-few-public-methods
 class AwsSubAccountConfiguration(object):
@@ -254,7 +248,7 @@ class AwsSubAccount(object):
         else:
             return None
 
-    def get_session(self, region, check_cache=True):
+    def get_session(self, region):
         """
         Creates a new session object in the given region
         Arguments:
@@ -264,7 +258,7 @@ class AwsSubAccount(object):
 
         return self.parent_account.get_session(
             region, self.sub_account_config.role_arn,
-            self.sub_account_config.role_external_id, check_cache)
+            self.sub_account_config.role_external_id)
 
 #pylint: disable=too-few-public-methods
 class AwsInstances(object):

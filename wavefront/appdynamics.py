@@ -304,7 +304,6 @@ class AppDMetricRetrieverCommand(command.Command):
                 self._get_metric_paths(_rtn_paths, app, node._children)
                 continue
 
-
             # black list ...
             keep = True
             for pattern in self.config.fields_blacklist_regex_compiled:
