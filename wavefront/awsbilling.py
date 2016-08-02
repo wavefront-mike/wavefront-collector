@@ -128,7 +128,7 @@ class AwsBillingDetailThreadConfiguration(object):
         """
         Gets the last record id for the given month
         """
-        return self.config.get(
+        return self.config.output.get(
             self.section_name, 'last_record_id_' + curr_month, None)
 
     def set_last_record_id(self, curr_month, record_id):
@@ -193,13 +193,14 @@ class AwsBillingMetricsCommand(AwsBaseMetricsCommand):
 
             try:
                 if config.enabled:
-                    if config.get_last_run_time():
-                        diff = utcnow - config.get_last_run_time()
+                    last_run_time = config.config.get_last_run_time()
+                    if last_run_time:
+                        diff = utcnow - last_run_time
                         if diff.total_seconds() <= config.delay:
                             self.logger.info('Not ready to run %s (last run at '
                                              '%s; expected delay interval is %ds)',
                                              config.section_name,
-                                             str(config.get_last_run_time()),
+                                             str(last_run_time),
                                              config.delay)
                             continue
                     if config.bucket == 'local':
@@ -208,7 +209,7 @@ class AwsBillingMetricsCommand(AwsBaseMetricsCommand):
 
                     else:
                         self._get_csv_from_s3(config)
-                    config.set_last_run_time(utcnow)
+                    config.config.set_last_run_time(utcnow, None, True)
                 else:
                     self.logger.info('Billing thread %s is disabled',
                                      config.section_name)

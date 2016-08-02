@@ -152,7 +152,7 @@ class CommandConfiguration(utils.Configuration):
             return self.output.getdate(
                 self.last_run_time_section, 'last_run_time', None)
 
-    def set_last_run_time(self, run_time, section_name=None):
+    def set_last_run_time(self, run_time, section_name=None, ignore_cancel=False):
         """
         Sets the last run time to the run_time argument.
 
@@ -160,7 +160,7 @@ class CommandConfiguration(utils.Configuration):
         run_time - the time when this script last executed successfully (end)
         """
 
-        if utils.CANCEL_WORKERS_EVENT.is_set():
+        if not ignore_cancel and utils.CANCEL_WORKERS_EVENT.is_set():
             return
 
         if not run_time:

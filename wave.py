@@ -129,6 +129,7 @@ class WavefrontThreadConfiguration(object):
         self.args.verbose = self.verbose
         self.delay = int(config.get(config_group, 'delay', 0))
         self.args.delay = self.delay
+        self.enabled = config.getboolean(config_group, 'enabled', True)
 
 class WavefrontConfiguration(utils.Configuration):
     """
@@ -201,9 +202,11 @@ def execute_commands(args):
         except ConfigParser.NoSectionError:
             pass
 
-        print('here')
         threads = []
         for conf in args.thread_configs:
+            if not conf.enabled:
+                logger.info('Skipping disabled command \'%s\'', conf.command)
+                continue
             targs = (conf.command, conf.args,)
             thread = threading.Thread(target=execute_command, args=targs,
                                       name=conf.command)
