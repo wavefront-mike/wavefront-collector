@@ -16,7 +16,6 @@ import threading
 import traceback
 
 import argparse
-import boto3
 import daemon
 import daemon.pidfile
 from wavefront import utils
@@ -66,6 +65,8 @@ def parse_args():
                               'should be redirected when running --daemon'))
     parser.add_argument('--pid',
                         help='The path to the PID file when running --daemon')
+    parser.add_argument('--verbose', action='store_true', default=False,
+                        help='More output')
 
     args, _ = parser.parse_known_args()
     if args.config:
@@ -83,8 +84,10 @@ def parse_args():
         try:
             module = importlib.import_module(details[0])
         except:
-            print('failed loading %s: %s' % (command_name, str(sys.exc_info())))
-            traceback.print_exc()
+            if args.verbose:
+                print('failed loading %s: %s' %
+                      (command_name, str(sys.exc_info())))
+                traceback.print_exc()
             continue
 
         class_name = details[1]
@@ -95,8 +98,6 @@ def parse_args():
 
     parser.add_argument('--verbose', action='store_true', default=False,
                         help='More output')
-    parser.add_argument('--debug', action='store_true', default=False,
-                        help=argparse.SUPPRESS)
     parser.add_argument('--daemon', action='store_true', default=False,
                         help='Run in background (default is false)')
     parser.add_argument('--out', default='./wavefront.out',
@@ -168,9 +169,6 @@ def main():
     Main function
     """
 
-    # this is a hack to workaround a bug in boto3
-    # see this bug report:
-    # https://github.com/boto/botocore/issues/577
     logging.basicConfig(format='%(levelname)s: %(message)s',
                         level=logging.INFO)
     args = parse_args()
