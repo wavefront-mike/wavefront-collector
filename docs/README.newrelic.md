@@ -104,12 +104,12 @@ This configuration file also acts as a fileconfig for the logger.  See [fileConf
 The response from the `*/metrics.json` API calls is cached for a day in `/tmp/wfnrcache`.  One file is stored here per path.  The filename is the MD5 of the path.
 
 ### Standard Configuration
-* [wavefront.conf](newrelic-sample-configuration/wavefront.conf)
+* [wavefront.conf](../data/newrelic-sample-configuration/wavefront.conf)
 	* Runs the script as a daemon with the PID file stored in the CWD (./wavefront.pid) and the stdout/stderr in ./wavefront.out.
 	* Runs 2 threads: one for processing the summary and one for the details.
-* [summary.conf](newrelic-sample-configuration/summary.conf)
+* [summary.conf](../data/newrelic-sample-configuration/summary.conf)
 	* gets the application summary every 30s (no details are retrieved so the summary metrics can be updated more frequently)
-* [details.conf](newrelic-sample-configuration/details.conf)
+* [details.conf](../data/newrelic-sample-configuration/details.conf)
 	* gets the application (host) details and delays 5m between each run.
 		
 ### New Relic Lessons Learned
