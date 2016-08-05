@@ -60,6 +60,7 @@ class NewRelicPluginConfiguration(command.CommandConfiguration):
         self.application_ids = self.getlist('filter', 'application_ids', [])
         self.start_time = self.getdate('filter', 'start_time', None)
         self.end_time = self.getdate('filter', 'end_time', None)
+        self._setup_output(self)
         last_run_time = self.get_last_run_time()
         if self.start_time and self.end_time and last_run_time:
             if last_run_time > self.start_time:
@@ -75,7 +76,6 @@ class NewRelicPluginConfiguration(command.CommandConfiguration):
             'options', 'include_server_summary', True)
         self.include_servers = self.getboolean(
             'options', 'include_server_details', False)
-        self._setup_output(self)
 
         self.include_hosts = self.getboolean('options', 'include_hosts', True)
         self.min_delay = int(self.get('options', 'min_delay', 60))

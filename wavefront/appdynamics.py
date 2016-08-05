@@ -249,7 +249,6 @@ class AppDMetricRetrieverCommand(command.Command):
                 self.logger.warn('[%s] no metrics found', app.name)
                 return
 
-
             # if the time is more than 10 minutes, AppD will make sample size
             # larger than a minute.  so, we'll grab the data in chunks
             # (10m at a time)
