@@ -33,7 +33,7 @@ The configuration is retrieved from and stored in an INI-formatted file with mul
 
 This configuration file also acts as a fileconfig for the logger.  See [fileConfig definition](https://docs.python.org/2/library/logging.config.html#logging.config.fileConfig) for more details on how to configure logging.
 
-A sample configuration is provided [here](https://github.com/wavefront-mike/wavefront-collector/tree/master/data/awsbilling-sample-configuration/awsbilling.conf).
+A sample configuration is provided [here](https://github.com/wavefrontHQ/wavefront-collector/tree/master/data/awsbilling-sample-configuration/awsbilling.conf).
 
 ## Section: aws_billing
 | Option | Description | Required? | Default |

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # The init.d script for the wavefront collector tools.
 
 CONFIG=/opt/wavefront/etc/wavefront-collector.conf

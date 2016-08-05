@@ -4,11 +4,11 @@ The Wavefront collector facilitates external integrations with Wavefront. This a
 ## Current Integrations
 | Integration | Command Name | Description | Python File |
 | --- | --- | --- | --- |
-| AppDynamics | [appdynamics](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.appdynamics.md) | Metrics from AppDynamics | [appdynamics.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/appdynamics.py) |
-| New Relic | [newrelic](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.newrelic.md) | Extracts metrics from New Relic API | [newrelic.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/newrelic.py) |
-| AWS Cloudwatch | [awscloudwatch](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.awscloudwatch.md) | Metrics pulled from AWS Cloudwatch | [awscloudwatch.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/awscloudwatch.py) |
-| AWS Billing | [awsbilling](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.awsbilling.md) | AWS Billing metrics retrieved from Billing Reports | [awsbilling.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/awsbilling.py) |
-| Linux System Checker | [systemchecker](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/docs/README.system_checker.md) | Creates Wavefront events when files matching a pattern are found (e.g., core dumps) or when files have changed | [system_checker.py](https://github.com/wavefront-mike/wavefront-integrations-tool/blob/master/wavefront/system_checker.py) |
+| AppDynamics | [appdynamics](https://github.com/wavefrontHQ/wavefront-collector/blob/master/docs/README.appdynamics.md) | Metrics from AppDynamics | [appdynamics.py](https://github.com/wavefrontHQ/wavefront-collector/blob/master/wavefront/appdynamics.py) |
+| New Relic | [newrelic](https://github.com/wavefrontHQ/wavefront-collector/blob/master/docs/README.newrelic.md) | Extracts metrics from New Relic API | [newrelic.py](https://github.com/wavefrontHQ/wavefront-collector/blob/master/wavefront/newrelic.py) |
+| AWS Cloudwatch | [awscloudwatch](https://github.com/wavefrontHQ/wavefront-collector/blob/master/docs/README.awscloudwatch.md) | Metrics pulled from AWS Cloudwatch | [awscloudwatch.py](https://github.com/wavefrontHQ/wavefront-collector/blob/master/wavefront/awscloudwatch.py) |
+| AWS Billing | [awsbilling](https://github.com/wavefrontHQ/wavefront-collector/blob/master/docs/README.awsbilling.md) | AWS Billing metrics retrieved from Billing Reports | [awsbilling.py](https://github.com/wavefrontHQ/wavefront-collector/blob/master/wavefront/awsbilling.py) |
+| Linux System Checker | [systemchecker](https://github.com/wavefrontHQ/wavefront-collector/blob/master/docs/README.system_checker.md) | Creates Wavefront events when files matching a pattern are found (e.g., core dumps) or when files have changed | [system_checker.py](https://github.com/wavefrontHQ/wavefront-collector/blob/master/wavefront/system_checker.py) |
 
 ## Installation
 
